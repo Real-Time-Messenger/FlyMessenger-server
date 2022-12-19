@@ -1,8 +1,10 @@
+from typing import Union
+
 from fastapi import status
 
 
 class APIException(Exception):
-    def __init__(self, code: int, message: str, translation_key: str | None = None):
+    def __init__(self, code: int, message: str, translation_key: Union[str, None] = None):
         self.code = code
         self.message = message
         self.translation_key = translation_key
@@ -14,18 +16,18 @@ class APIException(Exception):
         return self.__str__()
 
     @staticmethod
-    def bad_request(message: str, translation_key: str | None = None):
+    def bad_request(message: str, translation_key: Union[str, None] = None):
         return APIException(code=status.HTTP_400_BAD_REQUEST, message=message, translation_key=translation_key)
 
     @staticmethod
-    def unauthorized(message: str, translation_key: str | None = None):
+    def unauthorized(message: str, translation_key: Union[str, None] = None):
         return APIException(code=status.HTTP_401_UNAUTHORIZED, message=message, translation_key=translation_key)
 
     @staticmethod
-    def forbidden(message: str, translation_key: str | None = None):
+    def forbidden(message: str, translation_key: Union[str, None] = None):
         return APIException(code=status.HTTP_403_FORBIDDEN, message=message, translation_key=translation_key)
 
     @staticmethod
-    def not_found(message: str, translation_key: str | None = None):
+    def not_found(message: str, translation_key: Union[str, None] = None):
         return APIException(code=status.HTTP_404_NOT_FOUND, message=message, translation_key=translation_key)
 

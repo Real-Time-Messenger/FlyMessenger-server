@@ -1,7 +1,6 @@
 from datetime import datetime
 
-from bson import ObjectId
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from app.models.common.mongo.base_model import MongoModel
 from app.models.common.object_id import PyObjectId

@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import Union
 
 from fastapi import UploadFile
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -15,14 +16,14 @@ from app.services.token.token import TokenService
 
 class UserService:
     @staticmethod
-    async def get_by_id(user_id: PyObjectId, db: AsyncIOMotorClient) -> UserModel | None:
+    async def get_by_id(user_id: PyObjectId, db: AsyncIOMotorClient) -> Union[UserModel, None]:
         """ Get user by id. """
 
         user = await db[USERS_COLLECTION].find_one({"_id": user_id})
         return UserModel.from_mongo(user) if user else None
 
     @staticmethod
-    async def authenticate(username: str, password: str, db: AsyncIOMotorClient) -> UserModel | None:
+    async def authenticate(username: str, password: str, db: AsyncIOMotorClient) -> UserModel:
         """ Authenticate a user with username/email and password. """
 
         user = await UserService.get_by_username(username, db) or await UserService.get_by_email(username, db)
@@ -98,7 +99,7 @@ class UserService:
         return UserInResponseModel(**current_user.dict())
 
     @staticmethod
-    async def search(query: str, current_user: UserModel, db: AsyncIOMotorClient) -> list[UserInSearchModel] | list:
+    async def search(query: str, current_user: UserModel, db: AsyncIOMotorClient) -> list[UserInSearchModel]:
         """ Search for users. """
 
         users = await db[USERS_COLLECTION].find(
@@ -138,7 +139,7 @@ class UserService:
         await UserService.update(current_user, db)
 
     @staticmethod
-    async def get_by_reset_password_token(token: str, db: AsyncIOMotorClient) -> UserModel | None:
+    async def get_by_reset_password_token(token: str, db: AsyncIOMotorClient) -> UserModel:
         """ Get user by reset password token. """
 
         user = await db[USERS_COLLECTION].find_one({"resetPasswordToken": token})

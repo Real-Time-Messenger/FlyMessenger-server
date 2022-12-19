@@ -1,5 +1,6 @@
 import os
 from datetime import timedelta, datetime, timezone
+from typing import Union
 
 import jwt
 from fastapi.encoders import jsonable_encoder
@@ -17,11 +18,7 @@ class TokenService:
         return jwt.encode(payload=payload, key=os.getenv("JWT_SECRET"), algorithm=os.getenv("JWT_ALGORITHM"))
 
     @staticmethod
-    def decode(token: str) -> dict | None:
-
-        # Create an exception group for jwt exceptions.
-        ExceptionGroup = (jwt.InvalidTokenError, jwt.ExpiredSignatureError)  # <-- Only for python 3.11.
-
+    def decode(token: str) -> Union[dict, None]:
         options = {
             "verify_exp": True,  # Verify the expiration time
             "verify_iat": True,  # Verify the issued at time
@@ -31,7 +28,9 @@ class TokenService:
         try:
             return jwt.decode(jwt=token, key=os.getenv("JWT_SECRET"), algorithms=[os.getenv("JWT_ALGORITHM")],
                               options=options)
-        except ExceptionGroup:
+        except jwt.ExpiredSignatureError:
+            return None
+        except jwt.InvalidTokenError:
             return None
 
     @staticmethod
@@ -42,7 +41,7 @@ class TokenService:
         return jwt.encode(payload=payload, key=os.getenv("JWT_SECRET"), algorithm=os.getenv("JWT_ALGORITHM"))
 
     @staticmethod
-    def get_token_expiration(token: str) -> datetime | None:
+    def get_token_expiration(token: str) -> Union[datetime, None]:
         decoded_token = TokenService.decode(token)
 
         if decoded_token is None:

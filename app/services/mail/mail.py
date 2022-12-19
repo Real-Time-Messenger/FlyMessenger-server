@@ -3,7 +3,7 @@ from pathlib import Path
 
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 from jinja2 import Environment, select_autoescape, PackageLoader
-
+from pydantic import EmailStr
 
 # Load the templates.
 env = Environment(
@@ -29,7 +29,7 @@ config = ConnectionConfig(
 
 class EmailService:
     @staticmethod
-    async def send_email(email: str, subject: str, template: str, **kwargs):
+    async def send_email(email: EmailStr, subject: str, template: str, **kwargs):
         message = MessageSchema(
             subject=subject,
             recipients=[email],

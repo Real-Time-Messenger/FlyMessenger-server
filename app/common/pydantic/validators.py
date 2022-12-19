@@ -1,11 +1,7 @@
-from copy import deepcopy
-from typing import Callable
 
 from email_validator import EmailNotValidError, validate_email
-from pydantic import validator, EmailStr
-from pydantic.typing import AnyCallable
+from pydantic import EmailStr
 
-from app.exception.api import APIException
 from app.models.common.exceptions.body import NotCorrectLength, EmailIsNotValidType, PasswordsDoNotMatch
 
 def email_validator(email: EmailStr) -> EmailStr:

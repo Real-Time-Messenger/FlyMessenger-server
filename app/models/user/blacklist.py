@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Union
 
 from pydantic import Field
 
@@ -25,5 +26,5 @@ class BlacklistedUserInResponseModel(MongoModel):
     id: PyObjectId = Field(...)
     username: str = Field(...)
     first_name: str = Field(..., alias="firstName")
-    last_name: str | None = Field(default=None, alias="lastName")
-    photo_url: str | None = Field(alias="photoURL")
+    last_name: Union[str, None] = Field(default=None, alias="lastName")
+    photo_url: Union[str, None] = Field(alias="photoURL")

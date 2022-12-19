@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Union
 
 from fastapi import Request
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -82,7 +83,7 @@ class UserSessionService:
             user: UserModel,
             request: Request,
             db: AsyncIOMotorClient
-    ) -> UserSessionModel | None:
+    ) -> Union[UserSessionModel, None]:
         """ Get current session by user. """
 
         for session in user.sessions:
@@ -121,7 +122,7 @@ class UserSessionService:
         return None
 
     @staticmethod
-    async def get_by_token(token: str, db: AsyncIOMotorClient) -> UserSessionModel | None:
+    async def get_by_token(token: str, db: AsyncIOMotorClient) -> Union[UserSessionModel, None]:
         """ Get session by token. """
 
         # get session by token in user array of sessions and return session
