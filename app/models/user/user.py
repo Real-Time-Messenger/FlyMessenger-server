@@ -1,6 +1,7 @@
-from datetime import datetime, timedelta
+from datetime import datetime
+from typing import Union
+
 from email_validator import validate_email, EmailNotValidError
-from fastapi import Depends
 
 from pydantic import BaseModel, Field, EmailStr, validator, root_validator, SecretStr
 
@@ -14,7 +15,6 @@ from app.models.user.blacklist import BlacklistedUserModel, BlacklistedUserInRes
 from app.models.user.sessions import UserSessionModel, UserSessionInResponseModel
 from app.models.user.settings import UserSettingsModel, UserSettingsUpdateModel
 from app.services.hash.hash import HashService
-from app.services.token.token import TokenService
 
 
 class UserModel(MongoModel):
@@ -23,17 +23,17 @@ class UserModel(MongoModel):
     email: EmailStr = Field(...)
     password: str = Field(...)
     first_name: str = Field(..., min_length=3, max_length=25, alias="firstName")
-    last_name: str | None = Field(default=None, max_length=25, alias="lastName")
+    last_name: Union[str, None] = Field(default=None, max_length=25, alias="lastName")
     is_active: bool = Field(default=False ,alias="isActive")
-    photo_url: str | None = Field(alias="photoURL")
-    is_online: bool | None = Field(default=True, alias="isOnline")
-    last_activity: datetime | None = Field(default=None, alias="lastActivity")
+    photo_url: Union[str, None] = Field(alias="photoURL")
+    is_online: Union[bool, None] = Field(default=True, alias="isOnline")
+    last_activity: Union[datetime, None] = Field(default=None, alias="lastActivity")
     created_at: datetime = Field(default=datetime.utcnow(), alias="createdAt")
 
-    reset_password_token: str | None = Field(default=None, alias="resetPasswordToken")
-    reset_password_token_expiration: datetime | None = Field(default=None, alias="resetPasswordExpires")
+    reset_password_token: Union[str, None] = Field(default=None, alias="resetPasswordToken")
+    reset_password_token_expiration: Union[datetime, None] = Field(default=None, alias="resetPasswordExpires")
 
-    activation_token: str | None = Field(default=None, alias="activationToken")
+    activation_token: Union[str, None] = Field(default=None, alias="activationToken")
 
     settings: UserSettingsModel = Field(default_factory=UserSettingsModel)
     sessions: list[UserSessionModel] = Field(default_factory=list)
@@ -103,7 +103,7 @@ class UserInSignUpModel(MongoModel):
     #     return values
 
 class UserInLoginModel(BaseModel):
-    username: str | EmailStr = Field(..., example="username")
+    username: Union[str, EmailStr] = Field(..., example="username")
     password: SecretStr = Field(..., example="password")
 
     _username_validator = validator("username", allow_reuse=True)(username_validator)
@@ -116,13 +116,13 @@ class UserInAuthResponseModel(BaseModel):
 class UserInResponseModel(MongoModel):
     id: PyObjectId = Field(...)
     username: str = Field(...)
-    email: EmailStr | None = Field(None)
-    first_name: str | None = Field(None, alias="firstName")
-    last_name: str | None = Field(None, alias="lastName")
+    email: Union[EmailStr, None] = Field(None)
+    first_name: Union[str, None] = Field(None, alias="firstName")
+    last_name: Union[str, None] = Field(None, alias="lastName")
     is_active: bool = Field(..., alias="isActive")
-    photo_url: str | None = Field(alias="photoURL")
-    is_online: bool | None = Field(default=True, alias="isOnline")
-    last_activity: datetime | None = Field(default=None, alias="lastActivity")
+    photo_url: Union[str, None] = Field(alias="photoURL")
+    is_online: Union[bool, None] = Field(default=True, alias="isOnline")
+    last_activity: Union[datetime, None] = Field(default=None, alias="lastActivity")
     created_at: datetime = Field(..., alias="createdAt")
 
     settings: UserSettingsModel = Field(default_factory=UserSettingsModel)
@@ -131,10 +131,10 @@ class UserInResponseModel(MongoModel):
 
 
 class UserInUpdateModel(UserSettingsUpdateModel):
-    username: str | None = Field()
-    email: EmailStr | None = Field()
-    first_name: str | None = Field(min_length=3, max_length=25, alias="firstName")
-    last_name: str | None = Field(max_length=25, alias="lastName")
+    username: Union[str, None] = Field()
+    email: Union[EmailStr, None] = Field()
+    first_name: Union[str, None] = Field(min_length=3, max_length=25, alias="firstName")
+    last_name: Union[str, None] = Field(max_length=25, alias="lastName")
 
 
 class UserInSearchModel(MongoModel):
@@ -143,7 +143,7 @@ class UserInSearchModel(MongoModel):
     photo_url: str = Field(..., alias="photoURL")
     email: EmailStr = Field(...)
     first_name: str = Field(..., alias="firstName")
-    last_name: str | None = Field(..., alias="lastName")
+    last_name: Union[str, None] = Field(..., alias="lastName")
 
 
 class UserInCallResetPasswordModel(BaseModel):

@@ -4,7 +4,6 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from app.core.ouath.main import get_current_user
 from app.database.main import get_database
 from app.models.common.object_id import PyObjectId
-from app.models.common.responses.dialogs import DialogInDeleteResponseModel
 from app.models.dialog.dialog import DialogInCreateModel, DialogInResponseModel, DialogInUpdateModel
 from app.models.user.user import UserModel
 from app.services.dialog.dialog import DialogService

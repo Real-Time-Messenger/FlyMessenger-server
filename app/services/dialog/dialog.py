@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Union
 
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -19,7 +19,7 @@ class DialogService:
     async def get_by_id(
             dialog_id: PyObjectId,
             db: AsyncIOMotorClient
-    ) -> DialogModel | None:
+    ) -> Union[DialogModel, None]:
         """
         Get dialog by id
 
@@ -35,7 +35,7 @@ class DialogService:
     async def get_by_user_id(
             user_id: PyObjectId,
             db: AsyncIOMotorClient
-    ) -> list[DialogModel] | list:
+    ) -> Union[list[DialogModel], list]:
         """
         Get dialog by user id
 
@@ -52,7 +52,7 @@ class DialogService:
             user_id: PyObjectId,
             receiver_id: PyObjectId,
             db: AsyncIOMotorClient
-    ) -> DialogModel | None:
+    ) -> Union[DialogModel, None]:
         """
         Get dialog by user id and receiver id
 
@@ -92,7 +92,7 @@ class DialogService:
         return await DialogService.get_by_id(new_dialog.inserted_id, db)
 
     @staticmethod
-    async def get_dialogs(current_user: UserModel, db: AsyncIOMotorClient) -> list[DialogInResponseModel] | list:
+    async def get_dialogs(current_user: UserModel, db: AsyncIOMotorClient) -> Union[list[DialogInResponseModel], list]:
         """ Get all dialogs. """
 
         result = []
@@ -108,7 +108,7 @@ class DialogService:
 
     @staticmethod
     async def build_dialog(new_dialog: DialogModel, current_user: UserModel, db: AsyncIOMotorClient,
-                           last_message: DialogInResponseModel | None = None) -> DialogInResponseModel:
+                           last_message: Union[DialogInResponseModel, None] = None) -> DialogInResponseModel:
         """ Build dialog instance for response. """
 
         if new_dialog.from_user.id == current_user.id:

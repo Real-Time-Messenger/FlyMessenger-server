@@ -1,10 +1,9 @@
 from enum import Enum
+from typing import Union
 
-from bson import ObjectId
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from app.models.common.mongo.base_model import MongoModel
-from app.models.common.object_id import PyObjectId
 
 
 class ThemesEnum(str, Enum):
@@ -59,28 +58,28 @@ class UserSettingsModel(MongoModel):
 
 
 class UserSettingsUpdateModel(MongoModel):
-    two_factor_enabled: bool | None = Field(alias="twoFactorEnabled")
+    two_factor_enabled: Union[bool, None] = Field(alias="twoFactorEnabled")
 
-    theme: ThemesEnum | None = Field()
+    theme: Union[ThemesEnum, None] = Field()
 
-    language: LanguagesEnum | None = Field()
+    language: Union[LanguagesEnum, None] = Field()
 
-    chats_notifications_enabled: bool | None = Field(alias="chatsNotificationsEnabled")
-    conversations_notifications_enabled: bool | None = Field(alias="conversationsNotificationsEnabled")
-    groups_notifications_enabled: bool | None = Field(alias="groupsNotificationsEnabled")
+    chats_notifications_enabled: Union[bool, None] = Field(alias="chatsNotificationsEnabled")
+    conversations_notifications_enabled: Union[bool, None] = Field(alias="conversationsNotificationsEnabled")
+    groups_notifications_enabled: Union[bool, None] = Field(alias="groupsNotificationsEnabled")
 
-    chats_sound_enabled: bool | None = Field(alias="chatsSoundEnabled")
-    conversations_sound_enabled: bool | None = Field(alias="conversationsSoundEnabled")
-    groups_sound_enabled: bool | None = Field(alias="groupsSoundEnabled")
+    chats_sound_enabled: Union[bool, None] = Field(alias="chatsSoundEnabled")
+    conversations_sound_enabled: Union[bool, None] = Field(alias="conversationsSoundEnabled")
+    groups_sound_enabled: Union[bool, None] = Field(alias="groupsSoundEnabled")
 
-    notification_position: NotificationsPositionsEnum | None = Field(alias="notificationPosition")
+    notification_position: Union[NotificationsPositionsEnum, None] = Field(alias="notificationPosition")
 
-    is_display_name_visible: bool | None = Field(alias="isDisplayNameVisible")
-    is_email_visible: bool | None = Field(alias="isEmailVisible")
+    is_display_name_visible: Union[bool, None] = Field(alias="isDisplayNameVisible")
+    is_email_visible: Union[bool, None] = Field(alias="isEmailVisible")
 
-    last_activity_mode: bool | None = Field(alias="lastActivityMode")
+    last_activity_mode: Union[bool, None] = Field(alias="lastActivityMode")
 
-    allow_message_forwards: bool | None = Field(alias="allowMessageForwards")
-    allow_invites: bool | None = Field(alias="allowInvites")
+    allow_message_forwards: Union[bool, None] = Field(alias="allowMessageForwards")
+    allow_invites: Union[bool, None] = Field(alias="allowInvites")
 
-    allow_run_on_startup: bool | None = Field(alias="allowRunOnStartup")
+    allow_run_on_startup: Union[bool, None] = Field(alias="allowRunOnStartup")

@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Union
 
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -48,7 +49,7 @@ class BlacklistService:
 
     @staticmethod
     async def get_user_in_blacklist(blacklisted_user_id: PyObjectId,
-                                    current_user: UserModel) -> BlacklistedUserModel | None:
+                                    current_user: UserModel) -> Union[BlacklistedUserModel, None]:
         """ Get a user in blacklist. """
 
         for blacklist_model in current_user.blacklist:

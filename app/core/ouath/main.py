@@ -1,9 +1,10 @@
-from fastapi import Depends, HTTPException, Request
+from typing import Union
+
+from fastapi import Depends, Request
 from fastapi.openapi.models import OAuthFlows as OAuthFlowsModel
 from fastapi.security import OAuth2
 from fastapi.security.utils import get_authorization_scheme_param
 from motor.motor_asyncio import AsyncIOMotorClient
-from starlette import status
 
 from app.database.main import get_database
 from app.exception.api import APIException
@@ -27,7 +28,7 @@ class OAuth2PasswordBearerCookie(OAuth2):
         flows = OAuthFlowsModel(password={"tokenUrl": token_url, "scopes": scopes})
         super().__init__(flows=flows, scheme_name=scheme_name, auto_error=auto_error)
 
-    async def __call__(self, request: Request) -> str | None:
+    async def __call__(self, request: Request) -> Union[str, None]:
         cookie_authorization: str = request.cookies.get("Authorization")
 
         cookie_scheme, cookie_param = get_authorization_scheme_param(

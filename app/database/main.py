@@ -1,15 +1,16 @@
 import os
 
-from dotenv import find_dotenv, load_dotenv
+from dotenv import load_dotenv, find_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
 
-load_dotenv(find_dotenv("config/.env", raise_error_if_not_found=True))
+load_dotenv(find_dotenv(".env"))
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 assert DATABASE_URL is not None, "DATABASE_URL is not set. Please set it in your .env file."
 
-DATABASE_NAME = os.getenv("DATABASE_NAME")
+DATABASE_NAME = os.getenv("DATABASE_NAME", "messenger")
 assert DATABASE_NAME is not None, "DATABASE_NAME is not set. Please set it in your .env file."
+
 
 class DatabaseConnection:
     client: AsyncIOMotorClient = None
@@ -18,5 +19,5 @@ class DatabaseConnection:
 db = DatabaseConnection()
 
 
-async def get_database() -> AsyncIOMotorClient:
+def get_database() -> AsyncIOMotorClient:
     return db.client[DATABASE_NAME]

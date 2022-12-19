@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Union
 
 from fastapi.encoders import jsonable_encoder
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -76,7 +77,7 @@ class SocketBase:
                 self.connections.remove(connection)
                 break
 
-    def find_connection(self, user_id: PyObjectId) -> ConnectionModel | None:
+    def find_connection(self, user_id: PyObjectId) -> Union[ConnectionModel, None]:
         """
         Find connection by user id.
 
@@ -90,7 +91,7 @@ class SocketBase:
 
         return None
 
-    def find_connections_by_user_id(self, user_id: PyObjectId) -> list[ConnectionModel] | None:
+    def find_connections_by_user_id(self, user_id: PyObjectId) -> Union[list[ConnectionModel], list]:
         """
         Find connection by user id.
 
@@ -174,7 +175,7 @@ class SocketBase:
             except Exception:
                 await self.disconnect(connection.websocket)
 
-    async def emit_to_user(self, event_type: SocketSendTypesEnum, user_ids: list[PyObjectId] | PyObjectId, message: dict) -> None:
+    async def emit_to_user(self, event_type: SocketSendTypesEnum, user_ids: Union[list[PyObjectId], PyObjectId], message: dict) -> None:
         """
         Send message to specific user.
 

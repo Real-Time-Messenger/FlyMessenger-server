@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Union
 
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -16,7 +17,7 @@ class DialogMessageService:
     async def get_by_id(
             message_id: PyObjectId,
             db: AsyncIOMotorClient
-    ) -> DialogMessageModel | None:
+    ) -> Union[DialogMessageModel, None]:
         """
         Get dialog message by id
 
@@ -47,7 +48,7 @@ class DialogMessageService:
         return await DialogMessageService.get_by_id(new_dialog_message.inserted_id, db)
 
     @staticmethod
-    async def build_message(new_message: DialogMessageModel, db: AsyncIOMotorClient) -> DialogMessageInResponseModel | None:
+    async def build_message(new_message: DialogMessageModel, db: AsyncIOMotorClient) -> Union[DialogMessageInResponseModel, None]:
         """
         Build dialog message.
 
@@ -65,7 +66,7 @@ class DialogMessageService:
         )
 
     @staticmethod
-    async def get_by_dialog_id(dialog_id: PyObjectId, db: AsyncIOMotorClient) -> list[DialogMessageModel] | list:
+    async def get_by_dialog_id(dialog_id: PyObjectId, db: AsyncIOMotorClient) -> Union[list[DialogMessageModel], list]:
         """
         Get dialog message by dialog id
 

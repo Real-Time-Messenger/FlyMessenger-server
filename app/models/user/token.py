@@ -1,9 +1,5 @@
-from datetime import datetime, timedelta
-
 from bson import ObjectId
 from pydantic import BaseModel, Field
-
-from app.models.common.object_id import PyObjectId
 
 
 class TokenModel(BaseModel):

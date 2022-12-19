@@ -25,3 +25,4 @@ archive.zip
 .*.sw?
 
 .env
+.vercel

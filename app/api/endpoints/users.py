@@ -1,3 +1,5 @@
+from typing import Union
+
 from fastapi import APIRouter, Depends, UploadFile, File, Cookie
 from fastapi.encoders import jsonable_encoder
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -43,7 +45,7 @@ async def get_me(
 async def get_me(
         current_user: UserModel = Depends(get_current_user),
         db: AsyncIOMotorClient = Depends(get_database)
-) -> list[BlacklistedUserInResponseModel] | list:
+) -> Union[list[BlacklistedUserInResponseModel], list]:
     return [await BlacklistService.build_blacklisted_user(blacklist_model, db) for blacklist_model in current_user.blacklist]
 
 
@@ -110,19 +112,6 @@ async def block_or_unblock_user(
     )
 
 
-
-@router.delete(
-    path="/me/session/{session_id}"
-)
-async def update_avatar(
-        session_id: str,
-        authorization: str = Cookie(alias="Authorization"),
-        current_user: UserModel = Depends(get_current_user),
-        db: AsyncIOMotorClient = Depends(get_database)
-):
-    await UserService.delete_session(session_id, current_user, authorization, db)
-
-
 @router.delete(
     path="/me/blacklist/{blacklisted_user_id}"
 )
@@ -130,7 +119,7 @@ async def unblock_user(
         blacklisted_user_id: str,
         current_user: UserModel = Depends(get_current_user),
         db: AsyncIOMotorClient = Depends(get_database)
-) -> list[BlacklistedUserInResponseModel] | list:
+) -> Union[list[BlacklistedUserInResponseModel], list]:
     await BlacklistService.unblock_user(blacklisted_user_id, current_user, db)
 
     return [await BlacklistService.build_blacklisted_user(blacklist_model, db) for blacklist_model in current_user.blacklist]

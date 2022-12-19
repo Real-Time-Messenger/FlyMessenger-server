@@ -2,10 +2,8 @@ import base64
 from uuid import uuid4
 
 from fastapi import UploadFile
-from motor.motor_asyncio import AsyncIOMotorClient
 
 from app.common.constants import PUBLIC_FOLDER, SELF_URL
-from app.models.user.user import UserModel
 
 
 class ImageService:

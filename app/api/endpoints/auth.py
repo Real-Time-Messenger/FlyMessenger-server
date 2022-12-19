@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
+from typing import Union
 
-from fastapi import APIRouter, Depends, Request, Response, Cookie, Body, Form
+from fastapi import APIRouter, Depends, Request, Response, Cookie, Body
 from fastapi.exceptions import RequestValidationError
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -164,7 +165,7 @@ async def signup(
         request: Request,
         response: Response,
         db: AsyncIOMotorClient = Depends(get_database)
-) -> RequestValidationError | UserInAuthResponseModel:
+) -> Union[RequestValidationError, UserInAuthResponseModel]:
     """
     Create a new user and return token.
 
