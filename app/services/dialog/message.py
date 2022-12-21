@@ -8,6 +8,7 @@ from app.models.common.object_id import PyObjectId
 from app.models.dialog.dialog import DialogInResponseModel, LastMessageInDialogModel
 from app.models.dialog.messages import DialogMessageInCreateModel, DialogMessageModel, DialogMessageInResponseModel, \
     SenderInDialogMessageModel
+from app.models.user.user import UserModel
 from app.services.user.user import UserService
 
 
@@ -170,3 +171,30 @@ class DialogMessageService:
         """ Delete messages by dialog id """
 
         await db[DIALOG_MESSAGES_COLLECTION].delete_many({"dialogId": dialog_id})
+
+    @staticmethod
+    async def get_dialog_messages(dialog_id: PyObjectId, skip: int, limit: int, db: AsyncIOMotorClient) -> list[DialogMessageInResponseModel]:
+        """ Get dialog messages """
+
+        result = []
+
+        messages = db[DIALOG_MESSAGES_COLLECTION].find(
+            {
+                "dialogId": dialog_id,
+            }
+        ).skip(skip).limit(limit)
+
+        for message in await messages.to_list(length=limit):
+            message = DialogMessageModel.from_mongo(message)
+
+            sender = await UserService.get_by_id(message.sender_id, db)
+
+            result.append(
+                DialogMessageInResponseModel(
+                    sender=sender,
+                    sent_at=message.sent_at,
+                    **message.dict(exclude={"sent_at"})
+                )
+            )
+
+        return result

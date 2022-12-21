@@ -60,10 +60,10 @@ class DialogInResponseModel(MongoModel):
     is_me_blocked: bool = Field(default=False, alias="isMeBlocked")
 
 
-class DialogInUpdateModel(BaseModel):
-    is_pinned: Union[bool, None] = Field(default=None, alias="isPinned")
-    is_sound_enabled: Union[bool, None] = Field(default=None, alias="isSoundEnabled")
-    is_notifications_enabled: Union[bool, None] = Field(default=None, alias="isNotificationsEnabled")
+class DialogInUpdateModel(MongoModel):
+    is_pinned: Union[bool, None] = Field(alias="isPinned")
+    is_sound_enabled: Union[bool, None] = Field(alias="isSoundEnabled")
+    is_notifications_enabled: Union[bool, None] = Field(alias="isNotificationsEnabled")
 
     class Config:
         allow_population_by_field_name = True

@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import Union
 
-from pydantic import Field, constr
+from fastapi import Query
+from pydantic import Field, constr, BaseModel
 
 from app.models.common.mongo.base_model import MongoModel
 from app.models.common.object_id import PyObjectId
@@ -43,3 +44,8 @@ class DialogMessageInResponseModel(MongoModel):
     file: Union[str, None] = Field()
     is_read: bool = Field(default=False, alias="isRead")
     sent_at: datetime = Field(..., alias="sentAt")
+
+
+class DialogMessageInAppendModel(BaseModel):
+    skip: int = Field(default=0)
+    limit: int = Field(default=100)

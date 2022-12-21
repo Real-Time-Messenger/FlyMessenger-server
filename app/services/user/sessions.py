@@ -133,3 +133,21 @@ class UserSessionService:
                     return UserSessionModel(**session)
 
         return None
+
+    @staticmethod
+    async def is_alien_user(user: UserModel, request: Request):
+        """
+        Check if user is alien.
+
+        Algorithm:
+            - If user IP address not found in sessions, then we assume that user is alien.
+
+        :return: bool
+        """
+
+        ip_address = await LocationService.get_ip_address(request)
+        for session in user.sessions:
+            if session.ip_address == ip_address:
+                return False
+
+        return True

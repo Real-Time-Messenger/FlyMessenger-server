@@ -44,35 +44,35 @@ async def api_exception_handler(_: Request, exc: APIException):
     )
 
 
-@app.exception_handler(RequestValidationError)
-@app.exception_handler(APIRequestValidationException)
-@app.exception_handler(ValidationError)
-async def validation_exception_handler(_: Request, exc: RequestValidationError):
-    """ Exception handler for RequestValidationError. """
-
-    errors = []
-
-    if isinstance(exc, APIRequestValidationException):
-        errors = exc.details
-    else:
-        # Push all validation errors to pretty printed errors list.
-        for error in exc.errors():
-            errors.append(RequestValidationDetails(
-                location=error.get("loc")[0],
-                field=error.get("loc")[1] if len(error.get("loc")) > 1 else None,
-                message=f'{error.get("msg").capitalize()}.',
-                translation=error.get("ctx").get("translation_key") if error.get("ctx") is not None and "translation_key" in error.get("ctx") else None,
-            ))
-
-    return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content=jsonable_encoder(
-            APIRequestValidationModel(
-                details=jsonable_encoder(errors),
-                code=status.HTTP_422_UNPROCESSABLE_ENTITY
-            )
-        ),
-    )
+# @app.exception_handler(RequestValidationError)
+# @app.exception_handler(APIRequestValidationException)
+# @app.exception_handler(ValidationError)
+# async def validation_exception_handler(_: Request, exc: RequestValidationError):
+#     """ Exception handler for RequestValidationError. """
+#
+#     errors = []
+#
+#     if isinstance(exc, APIRequestValidationException):
+#         errors = exc.details
+#     else:
+#         # Push all validation errors to pretty printed errors list.
+#         for error in exc.errors():
+#             errors.append(RequestValidationDetails(
+#                 location=error.get("loc")[0],
+#                 field=error.get("loc")[1] if len(error.get("loc")) > 1 else None,
+#                 message=f'{error.get("msg").capitalize()}.',
+#                 translation=error.get("ctx").get("translation_key") if error.get("ctx") is not None and "translation_key" in error.get("ctx") else None,
+#             ))
+#
+#     return JSONResponse(
+#         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+#         content=jsonable_encoder(
+#             APIRequestValidationModel(
+#                 details=jsonable_encoder(errors),
+#                 code=status.HTTP_422_UNPROCESSABLE_ENTITY
+#             )
+#         ),
+#     )
 
 app.add_event_handler("startup", connect_to_mongo)
 app.add_event_handler("shutdown", close_mongo_connection)

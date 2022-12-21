@@ -5,8 +5,10 @@ from app.core.ouath.main import get_current_user
 from app.database.main import get_database
 from app.models.common.object_id import PyObjectId
 from app.models.dialog.dialog import DialogInCreateModel, DialogInResponseModel, DialogInUpdateModel
+from app.models.dialog.messages import DialogMessageInAppendModel
 from app.models.user.user import UserModel
 from app.services.dialog.dialog import DialogService
+from app.services.dialog.message import DialogMessageService
 
 router = APIRouter()
 
@@ -35,6 +37,18 @@ async def get_dialogs(
         db: AsyncIOMotorClient = Depends(get_database)
 ):
     return await DialogService.get_dialogs(current_user, db)
+
+
+@router.get(
+    path="/{dialog_id}/messages",
+)
+async def get_dialog_messages(
+        dialog_id: PyObjectId,
+        body: DialogMessageInAppendModel = Depends(),
+        current_user: UserModel = Depends(get_current_user),
+        db: AsyncIOMotorClient = Depends(get_database)
+):
+    return await DialogMessageService.get_dialog_messages(dialog_id, body.skip, body.limit, db)
 
 
 @router.put(

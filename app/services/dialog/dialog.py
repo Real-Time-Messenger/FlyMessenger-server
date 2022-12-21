@@ -44,7 +44,7 @@ class DialogService:
         :return: Dialog object
         """
 
-        dialog = db[DIALOGS_COLLECTION].find({"$or": [{"fromUser._id": user_id}, {"toUser._id": user_id}]})
+        dialog = db[DIALOGS_COLLECTION].find({"$or": [{"fromUser._id": user_id}, {"toUser._id": user_id}]}).limit(100)
         return [DialogModel.from_mongo(dialog) async for dialog in dialog]
 
     @staticmethod
@@ -172,7 +172,7 @@ class DialogService:
 
     @staticmethod
     async def update(dialog_id: PyObjectId, body: DialogInUpdateModel, current_user: UserModel,
-                     db: AsyncIOMotorClient) -> dict[str, Any]:
+                     db: AsyncIOMotorClient) -> DialogInResponseModel:
         """ Update dialog by id. """
 
         dialog = await DialogService.get_by_id(dialog_id, db)
@@ -184,20 +184,20 @@ class DialogService:
         for key, value in body.dict(exclude_unset=True).items():
 
             # If user try to update isPinned state for dialog
-            if key == DialogInUpdateModel.__fields__[key].name and value:
+            if key == DialogInUpdateModel.__fields__[key].name and value is not None:
                 pinned_dialogs_count = await DialogService.get_pinned_dialogs_count(current_user.id, db)
 
-                # Throw error if user already pinned 5 dialogs
-                if pinned_dialogs_count >= 5:
-                    raise APIException.bad_request("You can't pin more than 5 dialogs.")
+                # Throw error if user already pinned 10 dialogs
+                if pinned_dialogs_count >= 10:
+                    raise APIException.bad_request("You can't pin more than 10 dialogs.")
 
-            setattr(dialog_user, key, value)
+                setattr(dialog_user, key, value)
 
         dialog = DialogModel(**dialog.dict())
 
         await db[DIALOGS_COLLECTION].find_one_and_update({"_id": dialog.id}, {"$set": dialog.mongo()})
 
-        return body.dict(exclude_unset=True, by_alias=True)
+        return await DialogService.build_dialog(dialog, current_user, db)
 
     @staticmethod
     async def get_pinned_dialogs_count(user_id: PyObjectId, db: AsyncIOMotorClient) -> int:

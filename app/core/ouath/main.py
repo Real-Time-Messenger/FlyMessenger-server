@@ -30,15 +30,23 @@ class OAuth2PasswordBearerCookie(OAuth2):
 
     async def __call__(self, request: Request) -> Union[str, None]:
         cookie_authorization: str = request.cookies.get("Authorization")
+        header_authorization: str = request.headers.get("Authorization")
 
         cookie_scheme, cookie_param = get_authorization_scheme_param(
             cookie_authorization
+        )
+        header_scheme, header_param = get_authorization_scheme_param(
+            header_authorization
         )
 
         if cookie_scheme.lower() == "bearer":
             authorization = True
             scheme = cookie_scheme
             param = cookie_param
+        elif header_scheme.lower() == "bearer":
+            authorization = True
+            scheme = header_scheme
+            param = header_param
         else:
             authorization = False
 
@@ -59,6 +67,7 @@ async def get_current_user(
 ) -> UserModel:
     """ Get the current user from the token. """
 
+    token = token.replace("Bearer ", "")
     payload = TokenService.decode(token)
 
     if not payload:
@@ -67,8 +76,6 @@ async def get_current_user(
     user = await UserService.get_by_id(PyObjectId(payload["payload"]["id"]), db)
     if not user:
         raise APIException.unauthorized("Invalid authentication credentials.")
-
-    token = token.replace("Bearer ", "")
 
     is_token_exist = await UserSessionService.get_by_token(token, db)
     if not is_token_exist:

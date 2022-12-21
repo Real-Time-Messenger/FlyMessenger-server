@@ -14,10 +14,14 @@ from app.exception.body import APIRequestValidationException
 from app.models.common.exceptions.body import RequestValidationDetails, APIRequestValidationModel
 from app.models.common.exceptions.api import APIExceptionModel
 from app.models.common.object_id import PyObjectId
+from app.models.user.new_device import NewDeviceService
 from app.models.user.token import TokenModel
+from app.models.user.two_factor import TwoFactorService
 from app.models.user.user import UserInAuthResponseModel, UserInSignUpModel, UserModel, UserInCallResetPasswordModel, \
-    UserInResetPasswordModel, UserInActivationModel, UserInLoginModel
-from app.models.user.utils.reset_code import UserResetCodeModel, ValidateResetPasswordTokenModel
+    UserInResetPasswordModel, UserInActivationModel, UserInLoginModel, UserInEventResponseModel, \
+    UserInTwoFactorAuthenticationModel, UserInNewDeviceConfirmationModel
+from app.models.user.utils.reset_code import ValidateResetPasswordTokenModel
+from app.models.user.utils.response_types import AuthResponseType
 from app.services.hash.hash import HashService
 from app.services.mail.mail import EmailService
 from app.services.token.token import TokenService
@@ -85,7 +89,7 @@ async def login(
         response: Response,
         body: UserInLoginModel = Body(...),
         db: AsyncIOMotorClient = Depends(get_database)
-) -> UserInAuthResponseModel:
+) -> Union[UserInAuthResponseModel, UserInEventResponseModel]:
     """
     Authenticate user and return token.
 
@@ -96,6 +100,23 @@ async def login(
     user = await UserService.authenticate(body.username, body.password.get_secret_value(), db)
     if not user:
         raise APIException.not_found("The username or password is incorrect.", translation_key="incorrectUsernameOrPassword")
+
+    is_alien_user = await UserSessionService.is_alien_user(user, request)
+    if is_alien_user:
+        new_device_code = await NewDeviceService.generate_secret(user.email)
+
+        user.new_device_code = new_device_code
+        await UserService.update(user, db)
+
+        return UserInEventResponseModel(event=AuthResponseType.NEW_DEVICE)
+
+    if user.settings.two_factor_enabled:
+        two_factor_code = await TwoFactorService.generate_secret(user.email)
+
+        user.two_factor_code = two_factor_code
+        await UserService.update(user, db)
+
+        return UserInEventResponseModel(event=AuthResponseType.TWO_FACTOR)
 
     token = TokenService.generate_access_token(id=user.id)
     await UserSessionService.create(user, token, request, db)
@@ -279,17 +300,10 @@ async def call_reset_password(
         raise APIException.forbidden("The account is not active.")
 
     token = TokenService.generate_custom_token(timedelta(hours=1), type="reset_password", id=user.id)
-    token_expiration = datetime.utcnow() + timedelta(hours=1)
-    reset_code_model = UserResetCodeModel(
-        reset_password_token=token,
-        reset_password_token_expiration=token_expiration
-    )
 
-    user.reset_password_token = reset_code_model.reset_password_token
-    user.reset_password_token_expiration = reset_code_model.reset_password_token_expiration
+    user.reset_password_token = token
 
     await UserService.update(user, db)
-
     await EmailService.send_email(user.email, "Reset password", "reset_password", url=f"{FRONTEND_URL}/m/reset-password?token={token}")
 
 @router.post(path="/validate-reset-password-token")
@@ -304,7 +318,9 @@ async def validate_reset_password_token(
     if not user:
         raise APIException.not_found("The reset password token is incorrect.", translation_key="resetPasswordTokenIsNotValid")
 
-    if user.reset_password_token_expiration < datetime.utcnow():
+    token_expiration = TokenService.get_token_expiration(body.token)
+
+    if token_expiration < datetime.now():
         raise APIException.forbidden("The reset password token is expired.", translation_key="resetPasswordTokenIsExpired")
 
     return True
@@ -324,16 +340,53 @@ async def reset_password(
     if not user:
         raise APIException.not_found("The reset password token is incorrect.", translation_key="resetPasswordTokenIsNotValid")
 
-    if user.reset_password_token_expiration < datetime.utcnow():
+    token_expiration = TokenService.get_token_expiration(body.token)
+
+    if token_expiration < datetime.utcnow():
         raise APIException.forbidden("The reset password token is expired.", translation_key="resetPasswordTokenIsExpired")
 
     user.password = HashService.get_hash(body.password)
     user.reset_password_token = None
-    user.reset_password_token_expiration = None
 
     await UserService.update(user, db)
 
 
-# @router.post(path="/reset-password")
-# @router.post(path="/two-factor-authentication")
-# @router.post(path="/new-device-confirmation")
+@router.post(path="/two-factor")
+async def two_factor_authentication(
+        body: UserInTwoFactorAuthenticationModel,
+        response: Response,
+        request: Request,
+        db: AsyncIOMotorClient = Depends(get_database)
+) -> UserInAuthResponseModel:
+    """
+    Two-factor authentication.
+    """
+    user = await TwoFactorService.validate(body, db)
+
+    token = TokenService.generate_access_token(id=user.id)
+    await UserSessionService.create(user, token, request, db)
+
+    response.set_cookie(key="Authorization", value=f"Bearer {token}", **cookie_options)
+
+    return UserInAuthResponseModel(token=token)
+
+
+@router.post(path="/new-device")
+async def new_device_confirmation(
+        body: UserInNewDeviceConfirmationModel,
+        response: Response,
+        request: Request,
+        db: AsyncIOMotorClient = Depends(get_database)
+) -> UserInAuthResponseModel:
+    """
+    New device confirmation.
+    """
+
+    user = await NewDeviceService.validate(body, request, db)
+
+    token = TokenService.generate_access_token(id=user.id)
+    await UserSessionService.create(user, token, request, db)
+
+    response.set_cookie(key="Authorization", value=f"Bearer {token}", **cookie_options)
+
+    return UserInAuthResponseModel(token=token)

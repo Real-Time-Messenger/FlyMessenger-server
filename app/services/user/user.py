@@ -28,7 +28,8 @@ class UserService:
 
         user = await UserService.get_by_username(username, db) or await UserService.get_by_email(username, db)
         if not user:
-            raise APIException.not_found("We couldn't find an account with that username or email. Please check your credentials and try again.")
+            raise APIException.not_found(
+                "We couldn't find an account with that username or email. Please check your credentials and try again.")
 
         if not HashService.verify_password(password, user.password):
             raise APIException.unauthorized("Incorrect password. Please try again.")
@@ -36,12 +37,15 @@ class UserService:
         if not user.is_active:
             token_expiration = TokenService.get_token_expiration(user.activation_token)
             if token_expiration.timestamp() < datetime.now(tz=None).timestamp():
-                user.activation_token = TokenService.generate_custom_token(timedelta(hours=1), type="activation", id=user.id)
+                user.activation_token = TokenService.generate_custom_token(timedelta(hours=1), type="activation",
+                                                                           id=user.id)
                 await UserService.update(user, db)
 
-                raise APIException.forbidden("Your activation token has expired. We have sent you a new one.", translation_key="tokenExpiredCheckEmail")
+                raise APIException.forbidden("Your activation token has expired. We have sent you a new one.",
+                                             translation_key="tokenExpiredCheckEmail")
 
-            raise APIException.forbidden("Your account is not active. Please check your email for an activation link.", translation_key="userNotActiveCheckEmail")
+            raise APIException.forbidden("Your account is not active. Please check your email for an activation link.",
+                                         translation_key="userNotActiveCheckEmail")
 
         return user
 
@@ -57,7 +61,8 @@ class UserService:
 
             return created_user
         except DuplicateKeyError:
-            raise APIException.bad_request("The username or email is already taken.", translation_key="usernameOrEmailIsTaken")
+            raise APIException.bad_request("The username or email is already taken.",
+                                           translation_key="usernameOrEmailIsTaken")
 
     @staticmethod
     async def update(user: UserModel, db: AsyncIOMotorClient) -> UserModel:
@@ -139,9 +144,22 @@ class UserService:
         await UserService.update(current_user, db)
 
     @staticmethod
-    async def get_by_reset_password_token(token: str, db: AsyncIOMotorClient) -> UserModel:
+    async def get_by_reset_password_token(token: str, db: AsyncIOMotorClient) -> Union[UserModel, None]:
         """ Get user by reset password token. """
 
         user = await db[USERS_COLLECTION].find_one({"resetPasswordToken": token})
         return UserModel.from_mongo(user) if user else None
 
+    @staticmethod
+    async def get_by_two_factor_code(code: str, db: AsyncIOMotorClient) -> Union[UserModel, None]:
+        """ Get user by two-factor code. """
+
+        user = await db[USERS_COLLECTION].find_one({"twoFactorCode": code})
+        return UserModel.from_mongo(user) if user else None
+
+    @staticmethod
+    async def get_by_new_device_code(code: str, db: AsyncIOMotorClient) -> Union[UserModel, None]:
+        """ Get user by new device confirmation code. """
+
+        user = await db[USERS_COLLECTION].find_one({"newDeviceCode": code})
+        return UserModel.from_mongo(user) if user else None

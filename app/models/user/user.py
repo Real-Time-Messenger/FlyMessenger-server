@@ -17,6 +17,8 @@ from app.models.user.settings import UserSettingsModel, UserSettingsUpdateModel
 from app.services.hash.hash import HashService
 
 
+
+
 class UserModel(MongoModel):
     id: PyObjectId = Field(default_factory=PyObjectId)
     username: str = Field(..., max_length=50)
@@ -31,9 +33,9 @@ class UserModel(MongoModel):
     created_at: datetime = Field(default=datetime.utcnow(), alias="createdAt")
 
     reset_password_token: Union[str, None] = Field(default=None, alias="resetPasswordToken")
-    reset_password_token_expiration: Union[datetime, None] = Field(default=None, alias="resetPasswordExpires")
-
     activation_token: Union[str, None] = Field(default=None, alias="activationToken")
+    two_factor_code: Union[str, None] = Field(default=False, alias="twoFactorCode")
+    new_device_code: Union[str, None] = Field(default=False, alias="newDeviceCode")
 
     settings: UserSettingsModel = Field(default_factory=UserSettingsModel)
     sessions: list[UserSessionModel] = Field(default_factory=list)
@@ -59,49 +61,6 @@ class UserInSignUpModel(MongoModel):
     _password_confirm_validator = validator("password_confirm", allow_reuse=True)(password_confirm_validator)
     _passwords_match_validator = root_validator(allow_reuse=True)(passwords_match_validator)
 
-    # @validator("username", pre=True)
-    # def username_validator(cls, username: str) -> str:
-    #     if not len(username) >= 3 and len(username) <= 50:
-    #         raise NotCorrectLength(min_length=3, max_length=50, translation_key="usernameHasIncorrectLength")
-    #
-    #     return username
-    #
-    # @validator("email", pre=True)
-    # def email_validator(cls, email: EmailStr) -> EmailStr:
-    #     if not len(email) >= 3 and len(email) <= 255:
-    #         raise NotCorrectLength(min_length=3, max_length=255, translation_key="emailHasIncorrectLength")
-    #
-    #     try:
-    #         validate_email(email)
-    #     except EmailNotValidError as e:
-    #         raise EmailIsNotValidType(translation_key="emailHasIncorrectDomain")
-    #
-    #     return email
-    #
-    # @validator("password", pre=True)
-    # def password_validator(cls, password: str) -> str:
-    #     if not len(password) >= 8 and len(password) <= 32:
-    #         raise NotCorrectLength(min_length=8, max_length=32, translation_key="passwordHasIncorrectLength")
-    #
-    #     return password
-    #
-    # @validator("password_confirm", pre=True)
-    # def password_confirm_validator(cls, password_confirm: str) -> str:
-    #     if not len(password_confirm) >= 8 and len(password_confirm) <= 32:
-    #         raise NotCorrectLength(min_length=8, max_length=32, translation_key="passwordConfirmHasIncorrectLength")
-    #
-    #     return password_confirm
-    #
-    # @root_validator
-    # def passwords_match(cls, values: dict) -> dict:
-    #     password = values.get("password")
-    #     password_confirm = values.get("password_confirm")
-    #
-    #     if password != password_confirm:
-    #         raise PasswordsDoNotMatch(translation_key="passwordsDoNotMatch")
-    #
-    #     return values
-
 class UserInLoginModel(BaseModel):
     username: Union[str, EmailStr] = Field(..., example="username")
     password: SecretStr = Field(..., example="password")
@@ -111,6 +70,10 @@ class UserInLoginModel(BaseModel):
 
 class UserInAuthResponseModel(BaseModel):
     token: str = Field(...)
+
+
+class UserInEventResponseModel(BaseModel):
+    event: str = Field(...)
 
 
 class UserInResponseModel(MongoModel):
@@ -176,3 +139,11 @@ class UserInResetPasswordModel(BaseModel):
 
 class UserInActivationModel(BaseModel):
     token: str = Field(...)
+
+
+class UserInTwoFactorAuthenticationModel(BaseModel):
+    code: str = Field(...)
+
+
+class UserInNewDeviceConfirmationModel(BaseModel):
+    code: str = Field(...)
