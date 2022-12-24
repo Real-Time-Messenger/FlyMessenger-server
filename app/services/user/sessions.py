@@ -1,12 +1,12 @@
 from datetime import datetime
-from typing import Union
+from typing import Union, Optional
 
 from fastapi import Request
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from app.common.constants import USERS_COLLECTION
 from app.models.common.object_id import PyObjectId
-from app.models.user.sessions import UserSessionModel
+from app.models.user.sessions import UserSessionModel, UserSessionTypesEnum
 from app.models.user.user import UserModel
 from app.services.location.location import LocationService
 from app.services.token.token import TokenService
@@ -14,6 +14,11 @@ from app.services.user.user import UserService
 
 
 class UserSessionService:
+    """
+    Service for user sessions.
+
+    This class is responsible for performing tasks when a user logs in and out, as well as for CRUD requests.
+    """
 
     @staticmethod
     async def create(
@@ -22,15 +27,26 @@ class UserSessionService:
             request: Request,
             session: AsyncIOMotorClient
     ) -> UserSessionModel:
-        """ Create new session for user. """
+        """
+        Create new session for user.
+
+        :param user: User object.
+        :param token: Token object.
+        :param request: Request object.
+        :param session: Database connection object.
+
+        :return: User session object.
+        """
 
         ip_address = await LocationService.get_ip_address(request)
         user_location = await LocationService.get_location(ip_address)
 
+        session_type = UserSessionTypesEnum(request.headers.get("X-Client-Type") or "web")
+
         user_session = UserSessionModel(
             token=token,
             ip_address=ip_address,
-            type=request.headers.get("X-Client-Type") or "unknown",
+            type=session_type,
             label=f'Fly Messenger {request.headers.get("X-Client-Type") or "unknown"} {request.headers.get("X-Client-Version") or "unknown"}',
             location=f"{user_location.get('city')}, {user_location.get('region')}, {user_location.get('country')}",
             created_at=datetime.now(tz=None)
@@ -39,7 +55,6 @@ class UserSessionService:
         user.sessions.append(user_session.mongo())
 
         await UserService.update(user, session)
-
         return user_session
 
     @staticmethod
@@ -54,6 +69,11 @@ class UserSessionService:
         - Session is valid (if token is not expired).
         - Session is from the same device.
         - Session is from the same location.
+
+        :param session: User session object.
+        :param request: Request object.
+
+        :return: True if session is valid, False if session is invalid.
         """
 
         token = TokenService.decode(session.token)
@@ -83,8 +103,16 @@ class UserSessionService:
             user: UserModel,
             request: Request,
             db: AsyncIOMotorClient
-    ) -> Union[UserSessionModel, None]:
-        """ Get current session by user. """
+    ) -> Optional[UserSessionModel]:
+        """
+        Get current session by user.
+
+        :param user: User object.
+        :param request: Request object.
+        :param db: Database connection object.
+
+        :return: User session object.
+        """
 
         for session in user.sessions:
             is_valid_session = await UserSessionService.validate_session(session, request)
@@ -102,30 +130,56 @@ class UserSessionService:
             token: str,
             db: AsyncIOMotorClient
     ) -> None:
-        """ Delete session. """
+        """
+        Delete session by token.
+
+        :param user: User object.
+        :param token: Token object.
+        :param db: Database connection object.
+        """
 
         user.sessions = [session for session in user.sessions if session.token != token]
 
         await UserService.update(user, db)
 
     @staticmethod
-    async def get_by_id(session_id: PyObjectId, db: AsyncIOMotorClient):
-        """ Get session by id. """
+    async def get_by_id(
+            session_id: PyObjectId,
+            db: AsyncIOMotorClient
+    ) -> Optional[UserSessionModel]:
+        """
+        Get session by id.
 
-        # get session by id in user array of sessions and return session
+        :param session_id: Session id.
+        :param db: Database connection object.
+
+        :return: User session object if session exists, None if session does not exist.
+        """
+
         user = await db[USERS_COLLECTION].find_one({"sessions._id": session_id})
-        if user:
-            for session in user.get("sessions"):
-                if session.get("_id") == session_id:
-                    return UserSessionModel(**session)
+        if not user:
+            return None
+
+        for session in user.get("sessions"):
+            if session.get("_id") == session_id:
+                return UserSessionModel(**session)
 
         return None
 
     @staticmethod
-    async def get_by_token(token: str, db: AsyncIOMotorClient) -> Union[UserSessionModel, None]:
-        """ Get session by token. """
+    async def get_by_token(
+            token: str,
+            db: AsyncIOMotorClient
+    ) -> Optional[UserSessionModel]:
+        """
+        Get session by token.
 
-        # get session by token in user array of sessions and return session
+        :param token: Token object.
+        :param db: Database connection object.
+
+        :return: User session object if session exists, None if session does not exist.
+        """
+
         user = await db[USERS_COLLECTION].find_one({"sessions.token": token})
         if user:
             for session in user.get("sessions"):
@@ -135,14 +189,17 @@ class UserSessionService:
         return None
 
     @staticmethod
-    async def is_alien_user(user: UserModel, request: Request):
+    async def is_foreign_user(user: UserModel, request: Request) -> bool:
         """
-        Check if user is alien.
+        Check if user is foreign.
 
         Algorithm:
-            - If user IP address not found in sessions, then we assume that user is alien.
+            - If user IP address not found in sessions, then we assume that user is foreign.
 
-        :return: bool
+        :param user: User object.
+        :param request: Request object.
+
+        :return: True if user is foreign, False if user is not foreign.
         """
 
         ip_address = await LocationService.get_ip_address(request)

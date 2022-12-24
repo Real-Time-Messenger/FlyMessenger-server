@@ -1,12 +1,11 @@
 import random
 import string
-from typing import Union
 
 from fastapi import Request
-
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import EmailStr
 
+from app.common.swagger.responses.exceptions import USER_NOT_ACTIVATED
 from app.exception.api import APIException
 from app.models.user.user import UserModel
 from app.services.mail.mail import EmailService
@@ -15,6 +14,11 @@ from app.services.user.user import UserService
 
 
 class NewDeviceService:
+    """
+    Service for new device.
+
+    This class is responsible for performing tasks when a user first logs into an account.
+    """
 
     @staticmethod
     async def generate_secret(email: EmailStr) -> str:
@@ -22,13 +26,12 @@ class NewDeviceService:
         Generate secret and send it to user email.
 
         :param email: User email.
-        :return: str
+
+        :return: New device secret.
         """
 
-        # Generate 8 digit random digit
         secret = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
-        # Send email with secret
         await EmailService.send_email(
             email=email,
             subject="New device authentication",
@@ -39,19 +42,24 @@ class NewDeviceService:
         return secret
 
     @staticmethod
-    async def validate(body, request: Request, db: AsyncIOMotorClient) -> Union[UserModel, None]:
-        """ Validate incoming new device authentication request. """
+    async def validate(body, request: Request, db: AsyncIOMotorClient) -> UserModel:
+        """
+        Validate incoming new device authentication request.
 
-        if not body.code:
-            raise APIException.bad_request("The ew device confirmation code is required.", translation_key="newDeviceCodeIsEmpty")
+        :param body: Request body.
+        :param request: Request object.
+        :param db: Database object.
+
+        :return: User object.
+        """
 
         user = await UserService.get_by_new_device_code(body.code, db)
         if not user:
             raise APIException.not_found("The new device confirmation code is incorrect.",
                                          translation_key="newDeviceCodeIsNotValid")
 
-        is_alien = await UserSessionService.is_alien_user(user, request)
-        if not is_alien:
+        is_foreign = await UserSessionService.is_foreign_user(user, request)
+        if not is_foreign:
             raise APIException.bad_request("The new device confirmation code is incorrect.",
                                            translation_key="newDeviceCodeIsNotValid")
 
@@ -60,7 +68,7 @@ class NewDeviceService:
                                          translation_key="newDeviceCodeIsNotValid")
 
         if not user.is_active:
-            raise APIException.forbidden("The account is not active.", translation_key="userNotActive")
+            raise USER_NOT_ACTIVATED
 
         user.new_device_code = None
         await UserService.update(user, db)

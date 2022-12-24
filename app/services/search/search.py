@@ -9,15 +9,26 @@ from app.services.user.user import UserService
 
 
 class SearchService:
+    """
+    Service for search.
+
+    This class is responsible for performing search-related tasks.
+    """
 
     @staticmethod
     async def search(
             query: str,
             current_user: UserModel,
             db: AsyncIOMotorClient
-    ):
+    ) -> SearchResultModel:
         """
-        Search by query
+        Search by query.
+
+        :param query: Search query.
+        :param current_user: Current user.
+        :param db: Database connection object.
+
+        :return: Search result object.
         """
 
         dialogs = await DialogService.search(query, current_user, db)
@@ -30,12 +41,24 @@ class SearchService:
         return SearchResultModel(dialogs=dialogs, messages=messages, users=users)
 
     @staticmethod
-    async def search_by_dialog(query: str, dialog_id: str, current_user: UserModel, db: AsyncIOMotorClient):
+    async def search_by_dialog(
+            query: str,
+            dialog_id: PyObjectId,
+            current_user: UserModel,
+            db: AsyncIOMotorClient
+    ) -> SearchResultModel:
         """
-        Search by dialog
+        Search by dialog.
+
+        :param query: Search query.
+        :param dialog_id: Dialog ID.
+        :param current_user: Current user.
+        :param db: Database connection object.
+
+        :return: Search result object.
         """
 
-        dialog = await DialogService.get_by_id(PyObjectId(dialog_id), db)
+        dialog = await DialogService.get_by_id(dialog_id, db)
         dialog = await DialogService.build_dialog(dialog, current_user, db)
         messages = await DialogMessageService.search(query, [dialog], db)
 

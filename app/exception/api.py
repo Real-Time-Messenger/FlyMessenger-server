@@ -4,6 +4,8 @@ from fastapi import status
 
 
 class APIException(Exception):
+    """ Base class for all API exceptions. """
+
     def __init__(self, code: int, message: str, translation_key: Union[str, None] = None):
         self.code = code
         self.message = message

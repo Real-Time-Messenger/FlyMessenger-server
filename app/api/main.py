@@ -7,7 +7,10 @@ from app.api.endpoints.search import router as search_router
 
 router = APIRouter()
 
-router.include_router(auth_router, tags=["auth"], prefix="/auth")
-router.include_router(users_router, tags=["users"], prefix="/users")
-router.include_router(dialogs_router, tags=["dialogs"], prefix="/dialogs")
-router.include_router(search_router, tags=["search"], prefix="/search")
+"""
+Load all endpoints in one router for easy import.
+"""
+router.include_router(auth_router, tags=["Authentication"], prefix="/auth")
+router.include_router(users_router, tags=["Users"], prefix="/users")
+router.include_router(dialogs_router, tags=["Dialogs"], prefix="/dialogs")
+router.include_router(search_router, tags=["Search"], prefix="/search")

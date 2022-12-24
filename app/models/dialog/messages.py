@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import Union
 
-from fastapi import Query
 from pydantic import Field, constr, BaseModel
 
 from app.models.common.mongo.base_model import MongoModel
@@ -9,16 +8,21 @@ from app.models.common.object_id import PyObjectId
 
 
 class DialogMessageInCreateModel(MongoModel):
+    """ Model for create dialog message. """
+
     dialog_id: PyObjectId = Field(..., alias="dialogId")
     sender_id: PyObjectId = Field(..., alias="senderId")
     text: Union[str, None] = Field()
     file: Union[str, None] = Field()
 
-    class Config:
-        anystr_strip_whitespace = True
+    # TODO: Test it
+    # class Config:
+    #     anystr_strip_whitespace = True
 
 
 class SenderInDialogMessageModel(MongoModel):
+    """ Model for sender in dialog message. """
+
     id: PyObjectId = Field(...)
     username: str = Field(...)
     first_name: str = Field(..., alias="firstName")
@@ -27,6 +31,8 @@ class SenderInDialogMessageModel(MongoModel):
 
 
 class DialogMessageModel(MongoModel):
+    """ Base model for dialog message. """
+
     id: PyObjectId = Field(default_factory=PyObjectId)
     dialog_id: PyObjectId = Field(..., alias="dialogId")
     sender_id: PyObjectId = Field(..., alias="senderId")
@@ -37,6 +43,8 @@ class DialogMessageModel(MongoModel):
 
 
 class DialogMessageInResponseModel(MongoModel):
+    """ Response model for dialog message. """
+
     id: PyObjectId = Field(...)
     dialog_id: PyObjectId = Field(..., alias="dialogId")
     sender: SenderInDialogMessageModel = Field(...)
@@ -44,8 +52,3 @@ class DialogMessageInResponseModel(MongoModel):
     file: Union[str, None] = Field()
     is_read: bool = Field(default=False, alias="isRead")
     sent_at: datetime = Field(..., alias="sentAt")
-
-
-class DialogMessageInAppendModel(BaseModel):
-    skip: int = Field(default=0)
-    limit: int = Field(default=100)

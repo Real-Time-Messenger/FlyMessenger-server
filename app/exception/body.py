@@ -2,6 +2,8 @@ from app.models.common.exceptions.body import RequestValidationDetails
 
 
 class APIRequestValidationException(Exception):
+    """ Base class for all API request validation exceptions. """
+
     def __init__(self, details: list, code: int):
         self.details = details
         self.code = code

@@ -2,8 +2,17 @@ from datetime import datetime
 
 from pydantic import Field
 
+from app.common.types.str_enum import StrEnumBase
 from app.models.common.mongo.base_model import MongoModel
 from app.models.common.object_id import PyObjectId
+
+
+class UserSessionTypesEnum(StrEnumBase):
+    """ User session types enum. """
+
+    WEB = "web"
+    DESKTOP = "desktop"
+    UNKNOWN = "unknown"
 
 
 class UserSessionModel(MongoModel):
@@ -13,7 +22,7 @@ class UserSessionModel(MongoModel):
     token: str = Field(...)
     ip_address: str = Field(alias="ipAddress")
     label: str = Field(...)
-    type: str = Field(...)
+    type: UserSessionTypesEnum = Field(...)
     location: str = Field(...)
     created_at: datetime = Field(default=datetime.utcnow(), alias="createdAt")
 
@@ -24,6 +33,6 @@ class UserSessionInResponseModel(MongoModel):
     id: PyObjectId = Field(...)
     ip_address: str = Field(alias="ipAddress")
     label: str = Field(...)
-    type: str = Field(...)
+    type:  UserSessionTypesEnum = Field(...)
     location: str = Field(...)
     created_at: datetime = Field(..., alias="createdAt")

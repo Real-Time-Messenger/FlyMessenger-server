@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Optional
 
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -6,7 +6,7 @@ from app.common.constants import DIALOGS_COLLECTION
 from app.exception.api import APIException
 from app.models.common.object_id import PyObjectId
 from app.models.dialog.dialog import DialogInCreateModel, DialogModel, DialogInResponseModel, DialogInUpdateModel, \
-    UserInDialogResponseModel, UserInDialogCreateModel
+    UserInDialogResponseModel, UserInDialogModel
 from app.models.user.user import UserModel
 from app.services.dialog.message import DialogMessageService
 from app.services.user.blacklist import BlacklistService
@@ -14,37 +14,50 @@ from app.services.user.user import UserService
 
 
 class DialogService:
+    """
+    Service for dialog.
+
+    This class is responsible for performing tasks when dialog is created, updated, deleted, etc.
+    """
 
     @staticmethod
     async def get_by_id(
             dialog_id: PyObjectId,
             db: AsyncIOMotorClient
-    ) -> Union[DialogModel, None]:
+    ) -> Optional[DialogModel]:
         """
-        Get dialog by id
+        Get dialog by id.
 
-        :param dialog_id: Dialog ID
-        :param db: Database connection object
-        :return: Dialog object
+        :param dialog_id: Dialog ID.
+        :param db: Database connection object.
+
+        :return: Dialog object.
         """
 
         dialog = await db[DIALOGS_COLLECTION].find_one({"_id": dialog_id})
+        if not dialog:
+            return None
+
         return DialogModel.from_mongo(dialog)
 
     @staticmethod
     async def get_by_user_id(
             user_id: PyObjectId,
             db: AsyncIOMotorClient
-    ) -> Union[list[DialogModel], list]:
+    ) -> list[DialogModel]:
         """
-        Get dialog by user id
+        Get dialog by user id.
 
-        :param user_id: User ID
-        :param db: Database connection object
-        :return: Dialog object
+        :param user_id: User ID.
+        :param db: Database connection object.
+
+        :return: Dialog object.
         """
 
         dialog = db[DIALOGS_COLLECTION].find({"$or": [{"fromUser._id": user_id}, {"toUser._id": user_id}]}).limit(100)
+        if not dialog:
+            return []
+
         return [DialogModel.from_mongo(dialog) async for dialog in dialog]
 
     @staticmethod
@@ -52,37 +65,50 @@ class DialogService:
             user_id: PyObjectId,
             receiver_id: PyObjectId,
             db: AsyncIOMotorClient
-    ) -> Union[DialogModel, None]:
+    ) -> Optional[DialogModel]:
         """
-        Get dialog by user id and receiver id
+        Get dialog by user ID and receiver ID.
 
-        :param user_id: User ID
-        :param receiver_id: Receiver ID
-        :param db: Database connection object
-        :return: Dialog object
+        :param user_id: User ID.
+        :param receiver_id: Receiver ID.
+        :param db: Database connection object.
+
+        :return: Dialog object.
         """
 
         dialog = await db[DIALOGS_COLLECTION].find_one(
             {"$or": [{"fromUser._id": user_id, "toUser._id": receiver_id},
                      {"fromUser._id": receiver_id, "toUser._id": user_id}]})
+        if not dialog:
+            return None
+
         return DialogModel.from_mongo(dialog) if dialog else None
 
     @staticmethod
     async def create(body: DialogInCreateModel, current_user: UserModel, db: AsyncIOMotorClient) -> DialogModel:
-        """ Create a new dialog. """
+        """
+        Create a new dialog.
+
+        :param body: Dialog data.
+        :param current_user: Current user object.
+        :param db: Database connection object.
+
+        :return: New dialog object.
+        """
 
         is_dialog_exist = await DialogService.get_by_user_and_receiver_id(current_user.id, body.to_user_id, db)
         if is_dialog_exist:
-            raise APIException.bad_request("Dialog already exist")
+            raise APIException.bad_request("Dialog already exist.", translation_key="dialogAlreadyExist")
 
         is_adding_self = body.to_user_id == current_user.id
         if is_adding_self:
-            raise APIException.bad_request("You can't add yourself to dialog.")
+            raise APIException.bad_request("You can't add yourself to dialog.",
+                                           translation_key="cantAddYourselfToDialog")
 
-        from_user_payload = UserInDialogCreateModel(
+        from_user_payload = UserInDialogModel(
             id=current_user.id,
         )
-        to_user_payload = UserInDialogCreateModel(
+        to_user_payload = UserInDialogModel(
             id=body.to_user_id,
         )
 
@@ -92,24 +118,35 @@ class DialogService:
         return await DialogService.get_by_id(new_dialog.inserted_id, db)
 
     @staticmethod
-    async def get_dialogs(current_user: UserModel, db: AsyncIOMotorClient) -> Union[list[DialogInResponseModel], list]:
-        """ Get all dialogs. """
+    async def get_dialogs(current_user: UserModel, db: AsyncIOMotorClient) -> list[DialogInResponseModel]:
+        """
+        Get all user dialogs.
 
-        result = []
+        :param current_user: Current user object.
+        :param db: Database connection object.
+
+        :return: List of dialogs.
+        """
+
         dialogs = await DialogService.get_by_user_id(current_user.id, db)
         if not dialogs:
             return []
 
-        for dialog in dialogs:
-            dialog = await DialogService.build_dialog(dialog, current_user, db)
-            result.append(dialog)
-
-        return result
+        return [await DialogService.build_dialog(dialog, current_user, db) for dialog in dialogs]
 
     @staticmethod
     async def build_dialog(new_dialog: DialogModel, current_user: UserModel, db: AsyncIOMotorClient,
-                           last_message: Union[DialogInResponseModel, None] = None) -> DialogInResponseModel:
-        """ Build dialog instance for response. """
+                           last_message: Optional[DialogInResponseModel] = None) -> DialogInResponseModel:
+        """
+        Build dialog instance for response.
+
+        :param new_dialog: Dialog object.
+        :param current_user: Current user object.
+        :param db: Database connection object.
+        :param last_message: Last message in dialog (optional).
+
+        :return: Response dialog object.
+        """
 
         if new_dialog.from_user.id == current_user.id:
             user = await UserService.get_by_id(new_dialog.to_user.id, db)
@@ -117,8 +154,6 @@ class DialogService:
             user = await UserService.get_by_id(new_dialog.from_user.id, db)
 
         user_in_dialog = UserInDialogResponseModel(**user.dict())
-
-        label = ' '.join(filter(None, (user_in_dialog.first_name, user_in_dialog.last_name)))
 
         messages = await DialogMessageService.get_by_dialog_id_and_build(new_dialog.id, db)
         unread_messages = await DialogMessageService.get_unread_messages_count(new_dialog.id, current_user.id, db)
@@ -132,7 +167,6 @@ class DialogService:
         images = [message.file for message in messages if message.file]
 
         return DialogInResponseModel(
-            label=label,
             last_message=last_message,
             images=images,
             unread_messages=unread_messages,
@@ -145,27 +179,21 @@ class DialogService:
 
     @staticmethod
     async def search(query: str, current_user: UserModel, db: AsyncIOMotorClient) -> list[DialogInResponseModel]:
-        """ Search dialogs by query. """
+        """
+        Search dialogs by query.
+
+        :param query: Search query.
+        :param current_user: Current user object.
+        :param db: Database connection object.
+
+        :return: List of dialogs.
+        """
 
         dialogs = await DialogService.get_dialogs(current_user, db)
         result = []
 
         for dialog in dialogs:
-            # if query.lower() in dialog.label.lower() or dialog.user is not None and \
-            #         (query.lower() in dialog.user.first_name.lower() or
-            #         query.lower() in dialog.user.last_name.lower() or
-            #         query.lower() in dialog.user.username.lower()):
-            #     result.append(dialog)
-
-            print(dialog)
-
-            if query.lower() in dialog.label.lower() or (
-                    dialog.user is not None and
-                    (query.lower() in dialog.user.first_name.lower() or
-                     dialog.user.last_name is not None and query.lower() in dialog.user.last_name.lower() or
-                        query.lower() in dialog.user.username.lower())
-
-            ):
+            if query.lower() in dialog.user.first_name.lower() or query.lower() in dialog.user.last_name.lower():
                 result.append(dialog)
 
         return result
@@ -173,11 +201,20 @@ class DialogService:
     @staticmethod
     async def update(dialog_id: PyObjectId, body: DialogInUpdateModel, current_user: UserModel,
                      db: AsyncIOMotorClient) -> DialogInResponseModel:
-        """ Update dialog by id. """
+        """
+        Update dialog by ID.
+
+        :param dialog_id: Dialog ID.
+        :param body: Dialog data.
+        :param current_user: Current user object.
+        :param db: Database connection object.
+
+        :return: Updated dialog object.
+        """
 
         dialog = await DialogService.get_by_id(dialog_id, db)
         if not dialog:
-            raise APIException.not_found("Dialog not found.")
+            raise APIException.not_found("Dialog not found.", translation_key="dialogNotFound")
 
         dialog_user = dialog.from_user if dialog.from_user.id == current_user.id else dialog.to_user
 
@@ -189,7 +226,8 @@ class DialogService:
 
                 # Throw error if user already pinned 10 dialogs
                 if pinned_dialogs_count >= 10:
-                    raise APIException.bad_request("You can't pin more than 10 dialogs.")
+                    raise APIException.bad_request("You can't pin more than 10 dialogs.",
+                                                   translation_key="cantPinMoreThan10Dialogs")
 
                 setattr(dialog_user, key, value)
 
@@ -201,14 +239,27 @@ class DialogService:
 
     @staticmethod
     async def get_pinned_dialogs_count(user_id: PyObjectId, db: AsyncIOMotorClient) -> int:
-        """ Get all pinned dialogs. """
+        """
+        Get all pinned dialogs.
+
+        :param user_id: User ID.
+        :param db: Database connection object.
+
+        :return: Count of pinned dialogs.
+        """
 
         return await db[DIALOGS_COLLECTION].count_documents(
             {"$or": [{"fromUserId": user_id}, {"toUserId": user_id}], "isPinned": True})
 
     @staticmethod
     async def delete(dialog_id: PyObjectId, current_user: UserModel, db: AsyncIOMotorClient) -> None:
-        """ Delete dialog by id. """
+        """
+        Delete dialog by ID.
+
+        :param dialog_id: Dialog ID.
+        :param current_user: Current user object.
+        :param db: Database connection object.
+        """
 
         dialog = await DialogService.get_by_id(dialog_id, db)
         if not dialog:

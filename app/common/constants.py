@@ -1,3 +1,7 @@
+"""
+Store for all public constants.
+"""
+
 USERS_COLLECTION = "users"
 DIALOGS_COLLECTION = "dialogs"
 DIALOG_MESSAGES_COLLECTION = "dialog_messages"

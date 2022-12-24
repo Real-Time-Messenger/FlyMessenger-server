@@ -6,6 +6,8 @@ from app.models.user.blacklist import BlacklistedUserInResponseModel
 
 
 class BlockOrUnblockUserResponseModel(MongoModel):
+    """ Response model for block or unblock user. """
+
     user_id: PyObjectId = Field(..., alias="userId")
     is_blocked: bool = Field(..., alias="isBlocked")
     blacklist: list[BlacklistedUserInResponseModel] = Field(..., alias="blacklist")

@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Union
+from typing import Union, Optional
 
 from fastapi import UploadFile
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -15,16 +15,43 @@ from app.services.token.token import TokenService
 
 
 class UserService:
+    """
+    Service for user.
+
+    This class is responsible for performing tasks for CRUD requests.
+    """
+
     @staticmethod
-    async def get_by_id(user_id: PyObjectId, db: AsyncIOMotorClient) -> Union[UserModel, None]:
-        """ Get user by id. """
+    async def get_by_id(
+            user_id: PyObjectId,
+            db: AsyncIOMotorClient
+    ) -> Optional[UserModel]:
+        """
+        Get user by id.
+
+        :param user_id: User ID.
+        :param db: Database connection object.
+
+        :return: User object if found, None otherwise.
+        """
 
         user = await db[USERS_COLLECTION].find_one({"_id": user_id})
+        if not user:
+            return None
+
         return UserModel.from_mongo(user) if user else None
 
     @staticmethod
     async def authenticate(username: str, password: str, db: AsyncIOMotorClient) -> UserModel:
-        """ Authenticate a user with username/email and password. """
+        """
+        Authenticate a user with username/email and password.
+
+        :param username: Username or email.
+        :param password: Password.
+        :param db: Database connection object.
+
+        :return: User object.
+        """
 
         user = await UserService.get_by_username(username, db) or await UserService.get_by_email(username, db)
         if not user:
@@ -51,7 +78,14 @@ class UserService:
 
     @staticmethod
     async def create(body: UserInSignUpModel, db: AsyncIOMotorClient) -> UserModel:
-        """ Create a new user model. """
+        """
+        Create a new user.
+
+        :param body: User object.
+        :param db: Database connection object.
+
+        :return: New user object.
+        """
 
         try:
             user = UserModel(first_name=body.username, photo_url="https://i.imgur.com/1Q1Z1Zm.png", **body.dict())
@@ -66,7 +100,14 @@ class UserService:
 
     @staticmethod
     async def update(user: UserModel, db: AsyncIOMotorClient) -> UserModel:
-        """ Update a user model. """
+        """
+        Update a user model.
+
+        :param user: User object.
+        :param db: Database connection object.
+
+        :return: Updated user object.
+        """
 
         try:
             await db[USERS_COLLECTION].update_one({"_id": user.id}, {"$set": user.mongo()})
@@ -77,11 +118,19 @@ class UserService:
             # Get the field that is duplicated.
             key = e.details.get("errmsg").split("index: ")[1].split("_1")[0]
 
-            raise APIException.bad_request(f"The {key} is already taken.")
+            raise APIException.bad_request(f"The '{key}' is already taken.")
 
     @staticmethod
     async def update_avatar(file: UploadFile, user: UserModel, db: AsyncIOMotorClient) -> UserModel:
-        """ Update user avatar. """
+        """
+        Update user avatar.
+
+        :param file: Image file.
+        :param user: User object.
+        :param db: Database connection object.
+
+        :return: Updated user object.
+        """
 
         filename = await ImageService.upload_image(file)
 
@@ -92,11 +141,22 @@ class UserService:
 
     @staticmethod
     async def build_user_response(current_user: UserModel, db: AsyncIOMotorClient) -> UserInResponseModel:
-        """ Convert user to response model. """
+        """
+        Convert user to response model.
+
+        :param current_user: User object.
+        :param db: Database connection object.
+
+        :return: User response object.
+        """
 
         blacklist = []
         for blacklist_model in current_user.blacklist:
             blacklisted_user = await UserService.get_by_id(blacklist_model.blacklisted_user_id, db)
+
+            if blacklist_model is None:
+                continue
+
             blacklist.append(UserInResponseModel(**blacklisted_user.dict()))
 
         current_user.blacklist = blacklist
@@ -104,8 +164,20 @@ class UserService:
         return UserInResponseModel(**current_user.dict())
 
     @staticmethod
-    async def search(query: str, current_user: UserModel, db: AsyncIOMotorClient) -> list[UserInSearchModel]:
-        """ Search for users. """
+    async def search(
+            query: str,
+            current_user: UserModel,
+            db: AsyncIOMotorClient
+    ) -> list[UserInSearchModel]:
+        """
+        Search for users.
+
+        :param query: Search query.
+        :param current_user: User object.
+        :param db: Database connection object.
+
+        :return: List of users.
+        """
 
         users = await db[USERS_COLLECTION].find(
             {
@@ -118,48 +190,88 @@ class UserService:
                 "_id": {"$ne": current_user.id},
             }
         ).to_list(length=100)
+        if not users:
+            return []
 
         return [UserInSearchModel(**UserModel.from_mongo(user).dict()) for user in users]
 
     @staticmethod
-    async def get_by_username(username: str, db: AsyncIOMotorClient):
-        """ Get user by username. """
+    async def get_by_username(username: str, db: AsyncIOMotorClient) -> Optional[UserModel]:
+        """
+        Get user by username.
+
+        :param username: Username.
+        :param db: Database connection object.
+
+        :return: User object if found, None otherwise.
+        """
 
         user = await db[USERS_COLLECTION].find_one({"username": username})
-        return UserModel.from_mongo(user) if user else None
+        if not user:
+            return None
+
+        return UserModel.from_mongo(user)
 
     @staticmethod
-    async def get_by_email(email: str, db: AsyncIOMotorClient):
-        """ Get user by email. """
+    async def get_by_email(email: str, db: AsyncIOMotorClient) -> Optional[UserModel]:
+        """
+        Get user by email.
+
+        :param email: Email.
+        :param db: Database connection object.
+
+        :return: User object if found, None otherwise.
+        """
 
         user = await db[USERS_COLLECTION].find_one({"email": email})
-        return UserModel.from_mongo(user) if user else None
+        if not user:
+            return None
+
+        return UserModel.from_mongo(user)
 
     @staticmethod
     async def activate(current_user: UserModel, db: AsyncIOMotorClient) -> None:
-        """ Activate user account. """
+        """
+        Activate user account.
+
+        :param current_user: User object.
+        :param db: Database connection object.
+        """
 
         current_user.is_active = True
 
         await UserService.update(current_user, db)
 
     @staticmethod
-    async def get_by_reset_password_token(token: str, db: AsyncIOMotorClient) -> Union[UserModel, None]:
-        """ Get user by reset password token. """
+    async def get_by_two_factor_code(code: str, db: AsyncIOMotorClient) -> Optional[UserModel]:
+        """
+        Get user by two-factor code.
 
-        user = await db[USERS_COLLECTION].find_one({"resetPasswordToken": token})
-        return UserModel.from_mongo(user) if user else None
+        :param code: Two-factor code.
+        :param db: Database connection object.
 
-    @staticmethod
-    async def get_by_two_factor_code(code: str, db: AsyncIOMotorClient) -> Union[UserModel, None]:
-        """ Get user by two-factor code. """
+        :return: User object if found, None otherwise.
+        """
 
         user = await db[USERS_COLLECTION].find_one({"twoFactorCode": code})
-        return UserModel.from_mongo(user) if user else None
+        if not user:
+            return None
+
+        return UserModel.from_mongo(user)
 
     @staticmethod
-    async def get_by_new_device_code(code: str, db: AsyncIOMotorClient) -> Union[UserModel, None]:
-        """ Get user by new device confirmation code. """
+    async def get_by_new_device_code(code: str, db: AsyncIOMotorClient) -> Optional[UserModel]:
+        """
+        Get user by new device confirmation code.
+
+        :param code: New device confirmation code.
+        :param db: Database connection object.
+
+        :return: User object if found, None otherwise.
+        """
 
         user = await db[USERS_COLLECTION].find_one({"newDeviceCode": code})
-        return UserModel.from_mongo(user) if user else None
+        if not user:
+            return None
+
+        return UserModel.from_mongo(user)

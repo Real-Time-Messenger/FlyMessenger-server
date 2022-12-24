@@ -1,12 +1,13 @@
 from datetime import datetime
-from typing import Union
+from typing import Union, Optional, Annotated
 
 from email_validator import validate_email, EmailNotValidError
+from fastapi import Query
 
 from pydantic import BaseModel, Field, EmailStr, validator, root_validator, SecretStr
 
 from app.common.pydantic.validators import username_validator, password_validator, passwords_match_validator, \
-    email_validator, password_confirm_validator
+    email_validator, password_confirm_validator, first_name_validator, last_name_validator
 from app.exception.api import APIException
 from app.models.common.exceptions.body import NotCorrectLength, EmailIsNotValidType
 from app.models.common.mongo.base_model import MongoModel
@@ -20,22 +21,24 @@ from app.services.hash.hash import HashService
 
 
 class UserModel(MongoModel):
+    """ Base model for user. """
+
     id: PyObjectId = Field(default_factory=PyObjectId)
     username: str = Field(..., max_length=50)
     email: EmailStr = Field(...)
     password: str = Field(...)
     first_name: str = Field(..., min_length=3, max_length=25, alias="firstName")
-    last_name: Union[str, None] = Field(default=None, max_length=25, alias="lastName")
+    last_name: Optional[str] = Field(default=None, max_length=25, alias="lastName")
     is_active: bool = Field(default=False ,alias="isActive")
-    photo_url: Union[str, None] = Field(alias="photoURL")
-    is_online: Union[bool, None] = Field(default=True, alias="isOnline")
-    last_activity: Union[datetime, None] = Field(default=None, alias="lastActivity")
+    photo_url: Optional[str] = Field(alias="photoURL")
+    is_online: Optional[bool] = Field(default=True, alias="isOnline")
+    last_activity: Optional[datetime] = Field(default=None, alias="lastActivity")
     created_at: datetime = Field(default=datetime.utcnow(), alias="createdAt")
 
-    reset_password_token: Union[str, None] = Field(default=None, alias="resetPasswordToken")
-    activation_token: Union[str, None] = Field(default=None, alias="activationToken")
-    two_factor_code: Union[str, None] = Field(default=False, alias="twoFactorCode")
-    new_device_code: Union[str, None] = Field(default=False, alias="newDeviceCode")
+    reset_password_token: Optional[str] = Field(default=None, alias="resetPasswordToken")
+    activation_token: Optional[str] = Field(default=None, alias="activationToken")
+    two_factor_code: Optional[str] = Field(default=False, alias="twoFactorCode")
+    new_device_code: Optional[str] = Field(default=False, alias="newDeviceCode")
 
     settings: UserSettingsModel = Field(default_factory=UserSettingsModel)
     sessions: list[UserSessionModel] = Field(default_factory=list)
@@ -43,6 +46,8 @@ class UserModel(MongoModel):
 
     @validator("password", pre=True)
     def hash_password(cls, pw: str) -> str:
+        """ Hash password before save to database (if password is not hashed yet). """
+
         if HashService.is_hashed(pw):
             return pw
 
@@ -50,42 +55,56 @@ class UserModel(MongoModel):
 
 
 class UserInSignUpModel(MongoModel):
+    """ Model for sign up user. """
+
     username: str = Field(...)
     email: EmailStr = Field(...)
     password: str = Field(...)
     password_confirm: str = Field(..., alias="passwordConfirm")
 
+    # Validators
     _username_validator = validator("username", allow_reuse=True)(username_validator)
     _password_validator = validator("password", allow_reuse=True)(password_validator)
     _email_validator = validator("email", allow_reuse=True)(email_validator)
     _password_confirm_validator = validator("password_confirm", allow_reuse=True)(password_confirm_validator)
     _passwords_match_validator = root_validator(allow_reuse=True)(passwords_match_validator)
 
+
 class UserInLoginModel(BaseModel):
+    """ Model for login user. """
+
     username: Union[str, EmailStr] = Field(..., example="username")
     password: SecretStr = Field(..., example="password")
 
+    # Validators
     _username_validator = validator("username", allow_reuse=True)(username_validator)
     _password_validator = validator("password", allow_reuse=True)(password_validator)
 
+
 class UserInAuthResponseModel(BaseModel):
+    """ Model for auth response. """
+
     token: str = Field(...)
 
 
 class UserInEventResponseModel(BaseModel):
+    """ Model for user event response. """
+
     event: str = Field(...)
 
 
 class UserInResponseModel(MongoModel):
+    """ Response model for user. """
+
     id: PyObjectId = Field(...)
     username: str = Field(...)
-    email: Union[EmailStr, None] = Field(None)
-    first_name: Union[str, None] = Field(None, alias="firstName")
-    last_name: Union[str, None] = Field(None, alias="lastName")
+    email: Optional[EmailStr] = Field(None)
+    first_name: Optional[str] = Field(None, alias="firstName")
+    last_name: Optional[str] = Field(None, alias="lastName")
     is_active: bool = Field(..., alias="isActive")
-    photo_url: Union[str, None] = Field(alias="photoURL")
-    is_online: Union[bool, None] = Field(default=True, alias="isOnline")
-    last_activity: Union[datetime, None] = Field(default=None, alias="lastActivity")
+    photo_url: Optional[str] = Field(alias="photoURL")
+    is_online: Optional[bool] = Field(default=True, alias="isOnline")
+    last_activity: Optional[datetime] = Field(default=None, alias="lastActivity")
     created_at: datetime = Field(..., alias="createdAt")
 
     settings: UserSettingsModel = Field(default_factory=UserSettingsModel)
@@ -94,56 +113,60 @@ class UserInResponseModel(MongoModel):
 
 
 class UserInUpdateModel(UserSettingsUpdateModel):
-    username: Union[str, None] = Field()
-    email: Union[EmailStr, None] = Field()
-    first_name: Union[str, None] = Field(min_length=3, max_length=25, alias="firstName")
-    last_name: Union[str, None] = Field(max_length=25, alias="lastName")
+    """ Model for update user. """
+
+    email: Optional[EmailStr] = Field()
+    first_name: Optional[str] = Field(alias="firstName")
+    last_name: Optional[str] = Field(alias="lastName")
+
+    # Validators
+    _email_validator = validator("email", allow_reuse=True)(email_validator)
+    _first_name_validator = validator("first_name", allow_reuse=True)(first_name_validator)
+    _last_name_validator = validator("last_name", allow_reuse=True)(last_name_validator)
 
 
 class UserInSearchModel(MongoModel):
+    """ Model for search user. """
+
     id: PyObjectId = Field(...)
     username: str = Field(...)
     photo_url: str = Field(..., alias="photoURL")
     email: EmailStr = Field(...)
     first_name: str = Field(..., alias="firstName")
-    last_name: Union[str, None] = Field(..., alias="lastName")
+    last_name: Optional[str] = Field(..., alias="lastName")
 
 
 class UserInCallResetPasswordModel(BaseModel):
+    """ Model for call reset password. """
+
     email: EmailStr = Field(...)
 
-    @validator("email")
-    def email_is_correct(cls, email: EmailStr) -> EmailStr:
-        if not len(email) >= 3 and len(email) <= 255:
-            raise NotCorrectLength(min_length=3, max_length=255, translation_key="emailHasIncorrectLength")
+    # Validators
+    _email_validator = validator("email", allow_reuse=True)(email_validator)
 
-        try:
-            validate_email(email)
-        except EmailNotValidError as e:
-            raise EmailIsNotValidType(translation_key="emailHasIncorrectDomain")
-
-        return email
 
 class UserInResetPasswordModel(BaseModel):
-    token: str = Field(...)
-    password: str = Field(..., min_length=8, max_length=32)
-    password_confirm: str = Field(..., min_length=8, max_length=32, alias="passwordConfirm")
+    """ Model for reset password. """
 
-    @root_validator
-    def check_passwords_match(cls, values: dict) -> dict:
-        pw1, pw2 = values.get('password'), values.get('password_confirm')
-        if pw1 is not None and pw2 is not None and pw1 != pw2:
-            raise APIException.bad_request("Passwords do not match.")
-        return values
+    password: str = Field(...)
+    password_confirm: str = Field(..., alias="passwordConfirm")
+
+    # Validators
+    _password_validator = validator("password", allow_reuse=True)(password_validator)
+    _passwords_match_validator = root_validator(allow_reuse=True)(passwords_match_validator)
 
 
 class UserInActivationModel(BaseModel):
+    """ User activation model. """
+
     token: str = Field(...)
 
 
 class UserInTwoFactorAuthenticationModel(BaseModel):
+    """ User two-factor authentication model. """
     code: str = Field(...)
 
 
 class UserInNewDeviceConfirmationModel(BaseModel):
+    """ User new device confirmation model. """
     code: str = Field(...)

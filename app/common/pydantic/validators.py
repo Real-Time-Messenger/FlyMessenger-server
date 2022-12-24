@@ -1,8 +1,9 @@
-
 from email_validator import EmailNotValidError, validate_email
 from pydantic import EmailStr
 
-from app.models.common.exceptions.body import NotCorrectLength, EmailIsNotValidType, PasswordsDoNotMatch
+from app.models.common.exceptions.body import NotCorrectLength, EmailIsNotValidType, PasswordsDoNotMatch, \
+    NotCorrectToken, NotCorrectLengthWithoutMinLength
+
 
 def email_validator(email: EmailStr) -> EmailStr:
     """ Validate email for valid domain and length. """
@@ -17,6 +18,7 @@ def email_validator(email: EmailStr) -> EmailStr:
 
     return email
 
+
 def username_validator(cls, username: str) -> str:
     """ Validate username for length. """
 
@@ -25,6 +27,25 @@ def username_validator(cls, username: str) -> str:
 
     return username
 
+
+def first_name_validator(cls, first_name: str) -> str:
+    """ Validate first name for length. """
+
+    if not len(first_name) >= 3 and len(first_name) <= 25:
+        raise NotCorrectLength(min_length=3, max_length=25, translation_key="firstNameHasIncorrectLength")
+
+    return first_name
+
+
+def last_name_validator(cls, last_name: str) -> str:
+    """ Validate last name for length. """
+
+    if len(last_name) <= 25:
+        raise NotCorrectLengthWithoutMinLength(max_length=25, translation_key="lastNameHasIncorrectLength")
+
+    return last_name
+
+
 def password_validator(cls, password: str) -> str:
     """ Validate password for length. """
 
@@ -32,6 +53,7 @@ def password_validator(cls, password: str) -> str:
         raise NotCorrectLength(min_length=8, max_length=32, translation_key="passwordHasIncorrectLength")
 
     return password
+
 
 def password_confirm_validator(cls, password: str) -> str:
     """ Validate password for length. """
@@ -42,7 +64,6 @@ def password_confirm_validator(cls, password: str) -> str:
     return password
 
 
-# make pydantic validator for passwords match
 def passwords_match_validator(cls, values: dict) -> dict:
     """ Validate passwords match. """
 
@@ -54,5 +75,11 @@ def passwords_match_validator(cls, values: dict) -> dict:
 
     return values
 
-# example of usage
-# _passwords_match_validator = validator("password", "password_confirm", pre=True)(passwords_match_validator)
+
+def token_validator(cls, token: str) -> str:
+    """ Validate token for length. """
+
+    if not len(token) >= 10 and len(token) <= 1000:
+        raise NotCorrectToken(translation_key="tokenIsNotCorrect")
+
+    return token

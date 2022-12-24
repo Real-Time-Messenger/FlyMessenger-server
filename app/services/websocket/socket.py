@@ -18,7 +18,28 @@ from app.services.websocket.base import SocketBase, SocketReceiveTypesEnum, Sock
 
 
 class SocketService(SocketBase):
-    async def handle_connection(self, websocket: WebSocket, message: str, token: str, db: AsyncIOMotorClient) -> None:
+    """
+    Websocket service.
+
+    This service is responsible for handling websocket connections and sending messages to users.
+    """
+
+    async def handle_connection(
+            self,
+            websocket: WebSocket,
+            message: str,
+            token: str,
+            db: AsyncIOMotorClient
+    ) -> None:
+        """
+        Handle websocket connection and socket events.
+
+        :param websocket: Websocket connection.
+        :param message: Message from client.
+        :param token: Token from client.
+        :param db: Database connection.
+        """
+
         if not token:
             await websocket.close()
             return
@@ -91,7 +112,22 @@ class SocketService(SocketBase):
 
                 await UserService.update(user, db)
 
-    async def _get_recipient_id(self, user_id: PyObjectId, dialog_id: PyObjectId, db: AsyncIOMotorClient) -> PyObjectId:
+    async def _get_recipient_id(
+            self,
+            user_id: PyObjectId,
+            dialog_id: PyObjectId,
+            db: AsyncIOMotorClient
+    ) -> PyObjectId:
+        """
+        Get recipient id.
+
+        :param user_id: User id.
+        :param dialog_id: Dialog id.
+        :param db: Database connection.
+
+        :return: Recipient id.
+        """
+
         dialog = await DialogService.get_by_id(dialog_id, db)
 
         if not dialog:
@@ -100,8 +136,24 @@ class SocketService(SocketBase):
 
         return dialog.from_user.id if dialog.from_user.id != user_id else dialog.to_user.id
 
-    async def _handle_send_message(self, user_id: PyObjectId, dialog_id: PyObjectId, text: str, file: dict,
-                                   db: AsyncIOMotorClient) -> None:
+    async def _handle_send_message(
+            self,
+            user_id: PyObjectId,
+            dialog_id: PyObjectId,
+            text: str,
+            file: dict,
+            db: AsyncIOMotorClient
+    ) -> None:
+        """
+        Handle send message event.
+
+        :param user_id: User id.
+        :param dialog_id: Dialog id.
+        :param text: Message text.
+        :param file: Message file.
+        :param db: Database connection.
+        """
+
         recipient_id = await self._get_recipient_id(user_id, dialog_id, db)
 
         is_user_can_send_message = await self.check_if_user_can_send_message(user_id, recipient_id, db)
@@ -110,8 +162,13 @@ class SocketService(SocketBase):
 
         filename = await ImageService.upload_base64_image(file) if file else None
 
-        new_message_payload = DialogMessageInCreateModel(sender_id=user_id, dialog_id=dialog_id, text=text,
-                                                         file=filename)
+        new_message_payload = DialogMessageInCreateModel(
+            sender_id=user_id,
+            dialog_id=dialog_id,
+            text=text,
+            file=filename
+        )
+
         new_message = await DialogMessageService.create(new_message_payload, db)
 
         current_user = await UserService.get_by_id(user_id, db)
@@ -132,8 +189,22 @@ class SocketService(SocketBase):
             "userId": str(user_id),
         })
 
-    async def _handle_read_message(self, message_id: PyObjectId, user_id: PyObjectId, dialog_id: PyObjectId,
-                                   db: AsyncIOMotorClient) -> None:
+    async def _handle_read_message(
+            self,
+            message_id: PyObjectId,
+            user_id: PyObjectId,
+            dialog_id: PyObjectId,
+            db: AsyncIOMotorClient
+    ) -> None:
+        """
+        Handle read message event.
+
+        :param message_id: Message id.
+        :param user_id: User id.
+        :param dialog_id: Dialog id.
+        :param db: Database connection.
+        """
+
         message = await DialogMessageService.read_message(message_id, dialog_id, db)
 
         recipient_id = await self._get_recipient_id(user_id, dialog_id, db)
@@ -144,7 +215,20 @@ class SocketService(SocketBase):
             "dialogId": str(dialog_id),
         })
 
-    async def _handle_toggle_online_status(self, user_id: PyObjectId, status: bool, db: AsyncIOMotorClient) -> None:
+    async def _handle_toggle_online_status(
+            self,
+            user_id: PyObjectId,
+            status: bool,
+            db: AsyncIOMotorClient
+    ) -> None:
+        """
+        Handle toggle online status event.
+
+        :param user_id: User id.
+        :param status: Online status.
+        :param db: Database connection.
+        """
+
         user = await UserOnlineStatusService.toggle_online_status(user_id, status, db)
 
         await self._send_global_message({

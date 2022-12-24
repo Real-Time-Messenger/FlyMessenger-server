@@ -1,7 +1,11 @@
 from bson import ObjectId
 
+from app.models.common.exceptions.body import InvalidObjectId
+
 
 class PyObjectId(ObjectId):
+    """ Custom ObjectId type for Pydantic models. """
+
     @classmethod
     def __get_validators__(cls):
         yield cls.validate
@@ -9,7 +13,7 @@ class PyObjectId(ObjectId):
     @classmethod
     def validate(cls, v):
         if not ObjectId.is_valid(v):
-            raise ValueError("Invalid objectid")
+            raise InvalidObjectId(translation_key="idIsNotCorrect")
         return ObjectId(v)
 
     @classmethod

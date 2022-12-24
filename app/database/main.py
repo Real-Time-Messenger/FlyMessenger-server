@@ -13,6 +13,12 @@ assert DATABASE_NAME is not None, "DATABASE_NAME is not set. Please set it in yo
 
 
 class DatabaseConnection:
+    """
+    Database connection model.
+
+    Need only at the connection to the database.
+    """
+
     client: AsyncIOMotorClient = None
 
 
@@ -20,4 +26,10 @@ db = DatabaseConnection()
 
 
 def get_database() -> AsyncIOMotorClient:
+    """
+    Get the database connection.
+
+    :return: Database connection
+    """
+
     return db.client[DATABASE_NAME]

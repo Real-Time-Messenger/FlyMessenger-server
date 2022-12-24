@@ -2,11 +2,9 @@ from bson import ObjectId
 from pydantic import BaseModel, Field
 
 
-class TokenModel(BaseModel):
-    token: str = Field(...)
-
-
 class TokenInCreateModel(BaseModel):
+    """ Model for token in create. """
+
     exp: float = Field(...)
     iat: float = Field(...)
     payload: dict = Field(...)
