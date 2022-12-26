@@ -6,6 +6,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel
 from starlette.websockets import WebSocket
 
+from app.models.common.exceptions.body import InvalidObjectId
 from app.models.common.object_id import PyObjectId
 from app.services.token.token import TokenService
 from app.services.user.blacklist import BlacklistService
@@ -51,7 +52,7 @@ class SocketBase:
 
     connections: list[ConnectionModel] = []
 
-    async def accept(self, websocket: WebSocket, authorization: str) -> None:
+    async def accept(self, websocket: WebSocket, authorization: str) -> Optional[bool]:
         """
         Accept a new websocket connection.
 
@@ -60,13 +61,22 @@ class SocketBase:
         """
 
         await websocket.accept()
+        await websocket.send_json({"ping": "pong"})
 
-        token = authorization.replace("Bearer ", "")
-        user_id = TokenService.decode(token).get("payload").get("id")
+        token = TokenService.decode(authorization)
+        if token is None:
+            return False
 
-        if not user_id: return
+        user_id = token.get("payload", {}).get("id", "")
+        if not user_id:
+            return False
 
-        self.connections.append(ConnectionModel(token=token, websocket=websocket, user_id=user_id))
+        try:
+            user_id = PyObjectId.validate(user_id)
+        except InvalidObjectId:
+            return False
+
+        self.connections.append(ConnectionModel(token=authorization, websocket=websocket, user_id=user_id))
 
     async def disconnect(self, websocket: WebSocket) -> None:
         """
@@ -79,6 +89,7 @@ class SocketBase:
         for connection in self.connections:
             if connection.websocket == websocket:
                 self.connections.remove(connection)
+                await websocket.close()
                 break
 
     def find_connection(self, user_id: PyObjectId) -> Optional[ConnectionModel]:

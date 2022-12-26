@@ -11,7 +11,8 @@ class UserSessionTypesEnum(StrEnumBase):
     """ User session types enum. """
 
     WEB = "web"
-    DESKTOP = "desktop"
+    DESKTOP = "desktop",
+    TEST = "test"
     UNKNOWN = "unknown"
 
 
@@ -33,6 +34,6 @@ class UserSessionInResponseModel(MongoModel):
     id: PyObjectId = Field(...)
     ip_address: str = Field(alias="ipAddress")
     label: str = Field(...)
-    type:  UserSessionTypesEnum = Field(...)
+    type: UserSessionTypesEnum = Field(...)
     location: str = Field(...)
     created_at: datetime = Field(..., alias="createdAt")

@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Union, Optional
+from typing import Optional
 
 from fastapi import UploadFile
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -62,10 +62,10 @@ class UserService:
             raise APIException.unauthorized("Incorrect password. Please try again.")
 
         if not user.is_active:
-            token_expiration = TokenService.get_token_expiration(user.activation_token)
-            if token_expiration.timestamp() < datetime.now(tz=None).timestamp():
-                user.activation_token = TokenService.generate_custom_token(timedelta(hours=1), type="activation",
-                                                                           id=user.id)
+            token_expiration = TokenService.get_token_expiration(user.activation_token) or None
+            if token_expiration is None or token_expiration.timestamp() < datetime.now(tz=None).timestamp():
+                user.activation_token = TokenService.generate_custom_token(timedelta(hours=1), type="activation", id=user.id)
+
                 await UserService.update(user, db)
 
                 raise APIException.forbidden("Your activation token has expired. We have sent you a new one.",
@@ -132,7 +132,7 @@ class UserService:
         :return: Updated user object.
         """
 
-        filename = await ImageService.upload_image(file)
+        filename = await ImageService.upload_image(file, "avatars")
 
         user.photo_url = filename
         await UserService.update(user, db)

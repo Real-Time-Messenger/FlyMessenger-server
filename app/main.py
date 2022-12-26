@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import FastAPI, Request, Cookie, Depends, Query
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
@@ -82,49 +84,44 @@ async def validation_exception_handler(_: Request, exc: RequestValidationError):
 app.add_event_handler("startup", connect_to_mongo)
 app.add_event_handler("shutdown", close_mongo_connection)
 
-app.mount("../public", StaticFiles(directory="public", html=True), name="public")
+app.mount("/public", StaticFiles(directory="public", html=True), name="public")
 
 
-async def get_cookie(
-        cookie: str = Cookie(alias="Authorization"),
-        query: str = Query(alias="Authorization"),
+async def get_authorization(
+        authorization: Optional[str] = Cookie(None, alias="Authorization"),
+        query: Optional[str] = Query(None, alias="token"),
 ) -> str:
     """
     Validate cookie from
     
-    :param cookie: Cookie value.
+    :param authorization: Cookie value.
     :param query: Query value. 
     """
 
-    if cookie is not None:
-        return cookie
+    if authorization is None and query is None:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
 
-    if query is not None:
-        return query
+    if authorization is not None:
+        return authorization.replace("Bearer ", "") if authorization.startswith("Bearer ") else authorization
 
-    raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+    return query.replace("Bearer ", "") if query.startswith("Bearer ") else query
 
 
 @app.websocket("/ws")
 async def websocket_endpoint(
         websocket: WebSocket,
-        cookie: str = Depends(get_cookie),
+        credentials: str = Depends(get_authorization),
         db: AsyncIOMotorClient = Depends(get_database)
 ):
     """ Websocket endpoint. """
 
-    try:
-        await socket_service.accept(websocket, cookie)
+    if await socket_service.accept(websocket, credentials) is False:
+        await websocket.close()
+        return
 
+    try:
         while True:
             data = await websocket.receive_text()
-            await socket_service.handle_connection(websocket, data, cookie, db)
+            await socket_service.handle_connection(websocket, data, credentials, db)
     except WebSocketDisconnect:
         await socket_service.disconnect(websocket)
-
-
-@app.get("/")
-async def root():
-    """ Root endpoint. """
-
-    return {"message": "Hello World"}

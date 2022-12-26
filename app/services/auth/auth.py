@@ -41,8 +41,6 @@ class AuthService:
         response.set_cookie(
             key="Authorization",
             value=f"Bearer {token}",
-            max_age=int(timedelta(days=30).total_seconds()),
-            expires=int(timedelta(days=30).total_seconds()),
             **cookie_options
         )
 
@@ -141,7 +139,10 @@ class AuthService:
             raise APIRequestValidationException.from_details([error])
 
         user = await UserService.create(body, db)
+
         user.activation_token = TokenService.generate_custom_token(timedelta(hours=1), id=user.id)
+
+        await UserService.update(user, db)
 
         await EmailService.send_email(
             email=user.email,

@@ -25,7 +25,7 @@ class UserSessionService:
             user: UserModel,
             token: str,
             request: Request,
-            session: AsyncIOMotorClient
+            db: AsyncIOMotorClient
     ) -> UserSessionModel:
         """
         Create new session for user.
@@ -33,7 +33,7 @@ class UserSessionService:
         :param user: User object.
         :param token: Token object.
         :param request: Request object.
-        :param session: Database connection object.
+        :param db: Database connection object.
 
         :return: User session object.
         """
@@ -41,7 +41,8 @@ class UserSessionService:
         ip_address = await LocationService.get_ip_address(request)
         user_location = await LocationService.get_location(ip_address)
 
-        session_type = UserSessionTypesEnum(request.headers.get("X-Client-Type") or "web")
+        client_type = request.headers.get("X-Client-Type") or "unknown"
+        session_type = UserSessionTypesEnum(client_type.lower())
 
         user_session = UserSessionModel(
             token=token,
@@ -54,7 +55,7 @@ class UserSessionService:
 
         user.sessions.append(user_session.mongo())
 
-        await UserService.update(user, session)
+        await UserService.update(user, db)
         return user_session
 
     @staticmethod
@@ -115,8 +116,10 @@ class UserSessionService:
         """
 
         for session in user.sessions:
-            is_valid_session = await UserSessionService.validate_session(session, request)
+            if session.type == UserSessionTypesEnum.TEST:
+                continue
 
+            is_valid_session = await UserSessionService.validate_session(session, request)
             if is_valid_session:
                 return session
             else:
@@ -161,7 +164,7 @@ class UserSessionService:
             return None
 
         for session in user.get("sessions"):
-            if session.get("_id") == session_id:
+            if session.get("_id") == session_id and session.get("type") != UserSessionTypesEnum.TEST:
                 return UserSessionModel(**session)
 
         return None
@@ -181,10 +184,12 @@ class UserSessionService:
         """
 
         user = await db[USERS_COLLECTION].find_one({"sessions.token": token})
-        if user:
-            for session in user.get("sessions"):
-                if session.get("token") == token:
-                    return UserSessionModel(**session)
+        if not user:
+            return None
+
+        for session in user.get("sessions"):
+            if session.get("token") == token:
+                return UserSessionModel.from_mongo(session)
 
         return None
 
@@ -208,3 +213,29 @@ class UserSessionService:
                 return False
 
         return True
+
+    @staticmethod
+    async def create_fake(user, token, db) -> UserSessionModel:
+        """
+        Generate fake user session.
+
+        :param user: User object.
+        :param token: Token object.
+        :param db: Database connection object.
+
+        :return: User session object.
+        """
+
+        user_session = UserSessionModel(
+            token=token,
+            ip_address="TEST_IP_ADDRESS",
+            type=UserSessionTypesEnum.TEST,
+            label="TEST_USER",
+            location="TEST_LOCATION",
+            created_at=datetime.now(tz=None)
+        )
+
+        user.sessions.append(user_session.mongo())
+        await UserService.update(user, db)
+
+        return user_session

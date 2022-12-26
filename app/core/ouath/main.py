@@ -77,6 +77,7 @@ async def get_current_user(
 
     token = token.replace("Bearer ", "")
     payload = TokenService.decode(token)
+
     if not payload:
         raise APIException.unauthorized("Invalid token.", translation_key="invalidToken")
 

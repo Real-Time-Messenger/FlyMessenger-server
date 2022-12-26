@@ -46,7 +46,6 @@ class SocketService(SocketBase):
 
         json_data = json.loads(message)
         user_type = json_data.get("type")
-        token = token.replace("Bearer ", "")
         user_id = PyObjectId(TokenService.decode(token).get("payload").get("id"))
         dialog_id = PyObjectId(json_data.get("dialogId"))
 
@@ -160,7 +159,7 @@ class SocketService(SocketBase):
         if not is_user_can_send_message:
             return
 
-        filename = await ImageService.upload_base64_image(file) if file else None
+        filename = await ImageService.upload_base64_image(file, "uploads") if file else None
 
         new_message_payload = DialogMessageInCreateModel(
             sender_id=user_id,

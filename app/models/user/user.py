@@ -37,8 +37,8 @@ class UserModel(MongoModel):
 
     reset_password_token: Optional[str] = Field(default=None, alias="resetPasswordToken")
     activation_token: Optional[str] = Field(default=None, alias="activationToken")
-    two_factor_code: Optional[str] = Field(default=False, alias="twoFactorCode")
-    new_device_code: Optional[str] = Field(default=False, alias="newDeviceCode")
+    two_factor_code: Optional[str] = Field(default=None, alias="twoFactorCode")
+    new_device_code: Optional[str] = Field(default=None, alias="newDeviceCode")
 
     settings: UserSettingsModel = Field(default_factory=UserSettingsModel)
     sessions: list[UserSessionModel] = Field(default_factory=list)

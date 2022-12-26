@@ -42,8 +42,8 @@ class TokenService:
         """
         options = {
             "verify_exp": True,         # Verify the expiration time
-            "verify_iat": True,         # Verify the issued at time
-            "verify_signature": False,  # Verify the signature
+            "verify_iat": False,        # Verify the issued at time
+            "verify_signature": True,   # Verify the signature
         }
 
         try:

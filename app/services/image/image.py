@@ -27,6 +27,7 @@ class ImageService:
     @staticmethod
     async def upload_base64_image(
             image: dict,
+            folder: str = "uploads"
     ) -> str:
         """
         Upload image from base64.
@@ -36,10 +37,10 @@ class ImageService:
         :return: Image URL.
         """
 
-        image_bytes = base64.b64decode(image['data'].split(',')[1])
+        image_bytes = base64.b64decode(image['data'])
         image_name = f'{uuid4()}.png'
 
-        with open(f'{PUBLIC_FOLDER}/{image_name}', 'wb') as f:
+        with open(f'{PUBLIC_FOLDER}/{folder}/{image_name}', 'wb') as f:
             f.write(image_bytes)
 
         return ImageService._url(image_name)
@@ -47,6 +48,7 @@ class ImageService:
     @staticmethod
     async def upload_image(
             image: UploadFile,
+            folder: str = 'uploads'
     ) -> str:
         """
         Upload image.
@@ -58,7 +60,7 @@ class ImageService:
 
         image_name = f'{uuid4()}.png'
 
-        with open(f'{PUBLIC_FOLDER}/{image_name}', 'wb') as f:
-            f.write(image.file.read())
+        with open(f'{PUBLIC_FOLDER}/{folder}/{image_name}', 'wb') as f:
+            f.write(await image.read())
 
         return ImageService._url(image_name)

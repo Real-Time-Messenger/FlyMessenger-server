@@ -11,9 +11,10 @@ from app.models.common.exceptions.body import RequestValidationDetails
 from app.models.common.responses.blacklist import BlockOrUnblockUserResponseModel
 from app.models.socket.utils import SendBlockedMessageToClient
 from app.models.user.blacklist import BlacklistInCreateModel, BlacklistedUserInResponseModel
-from app.models.user.sessions import UserSessionInResponseModel
+from app.models.user.sessions import UserSessionInResponseModel, UserSessionTypesEnum
 from app.models.user.user import UserModel, UserInUpdateModel, UserInResponseModel
 from app.services.user.blacklist import BlacklistService
+from app.services.user.sessions import UserSessionService
 from app.services.user.user import UserService
 from app.services.websocket.socket import socket_service, SocketSendTypesEnum
 
@@ -49,7 +50,9 @@ async def get_my_sessions(
     **Note**: This endpoint is protected by OAuth2 scheme. It requires a valid access token to be sent in the **Authorization** header or cookie.
     """
 
-    return [UserSessionInResponseModel(**session.dict()) for session in current_user.sessions]
+    sessions = [session for session in current_user.sessions if session.type != UserSessionTypesEnum.TEST]
+
+    return [UserSessionInResponseModel(**session.dict()) for session in sessions]
 
 
 @router.get(
