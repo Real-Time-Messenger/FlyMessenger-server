@@ -82,7 +82,7 @@ async def validation_exception_handler(_: Request, exc: RequestValidationError):
 app.add_event_handler("startup", connect_to_mongo)
 app.add_event_handler("shutdown", close_mongo_connection)
 
-app.mount("/public", StaticFiles(directory="public", html=True), name="public")
+app.mount("../public", StaticFiles(directory="public", html=True), name="public")
 
 
 async def get_cookie(
@@ -121,3 +121,10 @@ async def websocket_endpoint(
             await socket_service.handle_connection(websocket, data, cookie, db)
     except WebSocketDisconnect:
         await socket_service.disconnect(websocket)
+
+
+@app.get("/")
+async def root():
+    """ Root endpoint. """
+
+    return {"message": "Hello World"}
