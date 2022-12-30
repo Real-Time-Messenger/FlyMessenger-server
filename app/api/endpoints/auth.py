@@ -11,6 +11,7 @@ from app.common.swagger.responses.auth import LOGIN_RESPONSES, SIGNUP_RESPONSES,
 from app.core.ouath.main import get_current_user, oauth2_scheme
 from app.database.main import get_database
 from app.exception.api import APIException
+from app.models.common.object_id import PyObjectId
 from app.services.auth.new_device import NewDeviceService
 from app.models.user.user import UserInAuthResponseModel, UserInSignUpModel, UserModel, UserInCallResetPasswordModel, \
     UserInResetPasswordModel, UserInActivationModel, UserInLoginModel, UserInEventResponseModel, \
@@ -129,7 +130,7 @@ async def call_reset_password(
 async def validate_reset_password_token(
         body: ValidateResetPasswordTokenModel,
         db: AsyncIOMotorClient = Depends(get_database)
-) -> bool:
+) -> None:
     """
     Validate reset password token.
 
@@ -142,28 +143,27 @@ async def validate_reset_password_token(
                                        translation_key="resetPasswordTokenIsNotValid")
 
     user_id = token.get("payload").get("id")
+    if user_id is None:
+        raise APIException.bad_request("The reset password token is incorrect",
+                                       translation_key="resetPasswordTokenIsNotValid")
 
-    user = await UserService.get_by_id(user_id, db)
+    user = await UserService.get_by_id(PyObjectId(user_id), db)
     if not user:
         raise APIException.not_found("The reset password token is incorrect.",
                                      translation_key="resetPasswordTokenIsNotValid")
 
     token_expiration = TokenService.get_token_expiration(body.token)
-
     if token_expiration < datetime.now():
         raise APIException.forbidden("The reset password token is expired.",
                                      translation_key="resetPasswordTokenIsExpired")
 
-    return True
-
 
 @router.post(
-    path="/reset-password/{token}",
+    path="/reset-password",
     responses=RESET_PASSWORD_RESPONSES
 )
 async def reset_password(
         body: UserInResetPasswordModel,
-        token: str = Path(...),
         db: AsyncIOMotorClient = Depends(get_database)
 ) -> None:
     """
@@ -174,7 +174,7 @@ async def reset_password(
     * **passwordConfirm**: New password confirmation
     """
 
-    await AuthService.reset_password(body, token, db)
+    await AuthService.reset_password(body, db)
 
 
 @router.post(

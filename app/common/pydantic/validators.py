@@ -40,7 +40,7 @@ def first_name_validator(cls, first_name: str) -> str:
 def last_name_validator(cls, last_name: str) -> str:
     """ Validate last name for length. """
 
-    if len(last_name) <= 25:
+    if len(last_name) > 25:
         raise NotCorrectLengthWithoutMinLength(max_length=25, translation_key="lastNameHasIncorrectLength")
 
     return last_name

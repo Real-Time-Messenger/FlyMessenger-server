@@ -5,12 +5,14 @@ from fastapi import UploadFile
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.errors import DuplicateKeyError
 
-from app.common.constants import USERS_COLLECTION
+from app.common.constants import USERS_COLLECTION, FRONTEND_URL
+from app.common.frontend.pages import ACTIVATION_PAGE
 from app.exception.api import APIException
 from app.models.common.object_id import PyObjectId
 from app.models.user.user import UserModel, UserInSignUpModel, UserInResponseModel, UserInSearchModel
 from app.services.hash.hash import HashService
 from app.services.image.image import ImageService
+from app.services.mail.mail import EmailService
 from app.services.token.token import TokenService
 
 
@@ -66,10 +68,15 @@ class UserService:
             if token_expiration is None or token_expiration.timestamp() < datetime.now(tz=None).timestamp():
                 user.activation_token = TokenService.generate_custom_token(timedelta(hours=1), type="activation", id=user.id)
 
-                await UserService.update(user, db)
+                await EmailService.send_email(
+                    user.email,
+                    "Activate your account",
+                    "activation",
+                    username=user.username,
+                    url=f"{ACTIVATION_PAGE}/{user.activation_token}"
+                )
 
-                raise APIException.forbidden("Your activation token has expired. We have sent you a new one.",
-                                             translation_key="tokenExpiredCheckEmail")
+                await UserService.update(user, db)
 
             raise APIException.forbidden("Your account is not active. Please check your email for an activation link.",
                                          translation_key="userNotActiveCheckEmail")
@@ -89,11 +96,10 @@ class UserService:
 
         try:
             user = UserModel(first_name=body.username, photo_url="https://i.imgur.com/1Q1Z1Zm.png", **body.dict())
+
             new_user = await db[USERS_COLLECTION].insert_one(user.mongo())
 
-            created_user = await UserService.get_by_id(new_user.inserted_id, db)
-
-            return created_user
+            return await UserService.get_by_id(new_user.inserted_id, db)
         except DuplicateKeyError:
             raise APIException.bad_request("The username or email is already taken.",
                                            translation_key="usernameOrEmailIsTaken")
@@ -275,3 +281,14 @@ class UserService:
             return None
 
         return UserModel.from_mongo(user)
+
+    @staticmethod
+    async def delete(current_user: UserModel, db: AsyncIOMotorClient):
+        """
+        Delete user.
+
+        :param current_user: User object.
+        :param db: Database connection object.
+        """
+
+        await db[USERS_COLLECTION].delete_one({"_id": current_user.id})

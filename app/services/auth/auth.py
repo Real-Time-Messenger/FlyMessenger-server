@@ -4,17 +4,18 @@ from typing import Union
 from fastapi import Request, Response
 from motor.motor_asyncio import AsyncIOMotorClient
 
-from app.common.constants import FRONTEND_URL, cookie_options
+from app.common.constants import cookie_options
+from app.common.frontend.pages import ACTIVATION_PAGE, RESET_PASSWORD
 from app.common.swagger.responses.exceptions import USER_NOT_ACTIVATED
 from app.exception.api import APIException
 from app.exception.body import APIRequestValidationException
 from app.models.common.exceptions.body import RequestValidationDetails
 from app.models.common.object_id import PyObjectId
-from app.services.auth.new_device import NewDeviceService
-from app.services.auth.two_factor import TwoFactorService
 from app.models.user.user import UserInSignUpModel, UserInEventResponseModel, UserInLoginModel, UserInAuthResponseModel, \
     UserInActivationModel, UserInCallResetPasswordModel, UserInResetPasswordModel, UserInTwoFactorAuthenticationModel
 from app.models.user.utils.response_types import AuthResponseType
+from app.services.auth.new_device import NewDeviceService
+from app.services.auth.two_factor import TwoFactorService
 from app.services.hash.hash import HashService
 from app.services.mail.mail import EmailService
 from app.services.token.token import TokenService
@@ -140,7 +141,7 @@ class AuthService:
 
         user = await UserService.create(body, db)
 
-        user.activation_token = TokenService.generate_custom_token(timedelta(hours=1), id=user.id)
+        user.activation_token = TokenService.generate_custom_token(timedelta(hours=1), id=user.id, type="activation")
 
         await UserService.update(user, db)
 
@@ -149,7 +150,7 @@ class AuthService:
             subject="Activate your account",
             template="activation",
             username=user.username,
-            url=f"{FRONTEND_URL}/m/activate/{user.activation_token}",
+            url=f"{ACTIVATION_PAGE}/{user.activation_token}",
         )
 
         return UserInEventResponseModel(event=AuthResponseType.ACTIVATION_REQUIRED)
@@ -176,9 +177,8 @@ class AuthService:
             raise APIException.bad_request("Activation code is expired.", translation_key="activationCodeIsExpired")
 
         user_id = PyObjectId(decoded_token.get("id"))
-
         user = await UserService.get_by_id(user_id, db)
-        if not user or user.is_active:
+        if not user:
             raise APIException.bad_request("Invalid activation code.", translation_key="invalidActivationCode")
 
         if user.is_active:
@@ -210,21 +210,21 @@ class AuthService:
         user.reset_password_token = token
 
         await UserService.update(user, db)
-        await EmailService.send_email(user.email, "Password recovery request", "reset_password", url=f"{FRONTEND_URL}/m/reset-password?token={token}")
+        await EmailService.send_email(user.email, "Password recovery request", "reset_password",
+                                      url=f"{RESET_PASSWORD}?token={token}")
 
     @staticmethod
-    async def reset_password(body: UserInResetPasswordModel, token: str, db: AsyncIOMotorClient) -> None:
+    async def reset_password(body: UserInResetPasswordModel, db: AsyncIOMotorClient) -> None:
         """
         Resetting the user's password.
 
         After successfully changing the password, the user must log in again.
 
         :param body: User reset password body.
-        :param token: Reset password token.
         :param db: Database object.
         """
 
-        token_payload = TokenService.decode(token)
+        token_payload = TokenService.decode(body.token)
         if not token_payload:
             raise APIException.bad_request("The reset password token is incorrect.",
                                            translation_key="resetPasswordTokenIsNotValid")
@@ -234,18 +234,22 @@ class AuthService:
             raise APIException.bad_request("The reset password token is incorrect.",
                                            translation_key="resetPasswordTokenIsNotValid")
 
-        user = await UserService.get_by_id(user_id, db)
+        user = await UserService.get_by_id(PyObjectId(user_id), db)
         if not user:
             raise APIException.not_found("The reset password token is incorrect.",
                                          translation_key="resetPasswordTokenIsNotValid")
 
-        token_expiration = TokenService.get_token_expiration(token)
+        token_expiration = TokenService.get_token_expiration(body.token)
         if token_expiration < datetime.utcnow():
             raise APIException.forbidden("The reset password token is expired.",
                                          translation_key="resetPasswordTokenIsExpired")
 
+        if HashService.verify_password(body.password, user.password):
+            raise APIException.bad_request("You cannot use the same password as before.",
+                                           translation_key="cannotUseSamePassword")
+
         user.password = HashService.get_hash(body.password)
-        user.reset_password_token = None
+        # user.reset_password_token = None
 
         await UserService.update(user, db)
 

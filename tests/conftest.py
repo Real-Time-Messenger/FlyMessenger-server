@@ -7,6 +7,13 @@ from app.database.main import get_database
 from app.main import app
 from tests.utils.user import user_authentication_headers
 
+"""
+What is `Fixture`?
+
+Fixture is a function, which returns some value.
+Fixture can be used in tests as a `parameter` (it is important)
+"""
+
 
 @pytest.fixture(scope="module")
 def client() -> Generator:
@@ -21,6 +28,4 @@ def db() -> Generator:
 
 @pytest.fixture(scope="module")
 def get_user_headers(client: TestClient) -> dict[str, str]:
-    return user_authentication_headers(
-        client=client
-    )
+    return user_authentication_headers(client=client)

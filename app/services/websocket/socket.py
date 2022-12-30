@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 
 from fastapi.encoders import jsonable_encoder
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -165,7 +166,7 @@ class SocketService(SocketBase):
             sender_id=user_id,
             dialog_id=dialog_id,
             text=text,
-            file=filename
+            file=filename,
         )
 
         new_message = await DialogMessageService.create(new_message_payload, db)
@@ -183,7 +184,7 @@ class SocketService(SocketBase):
         await self._send_personal_message([user_id, recipient_id], {
             "type": SocketSendTypesEnum.RECEIVE_MESSAGE,
             "message": await DialogMessageService.build_message(new_message, db),
-            "dialogId": str(dialog_id),
+            "dialog": dialog,
             "dialogData": dialog_data,
             "userId": str(user_id),
         })

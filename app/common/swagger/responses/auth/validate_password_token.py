@@ -7,7 +7,7 @@ VALIDATE_RESET_PASSWORD_TOKEN_RESPONSES = {
         'description': 'Reset password token is valid.',
         'content': {
             'application/json': {
-                'example': True,
+                'example': "null",
                 'schema': None
             }
         }
@@ -16,8 +16,9 @@ VALIDATE_RESET_PASSWORD_TOKEN_RESPONSES = {
         'description': 'Reset password token is expired.',
         'content': {
             'application/json': {
-                'example': False,
-                'schema': None
+                'example': APIException.forbidden("The reset password token is expired.",
+                                                  translation_key="resetPasswordTokenIsExpired"),
+                'schema': APIExceptionModel.schema()
             }
         }
     },
@@ -25,7 +26,8 @@ VALIDATE_RESET_PASSWORD_TOKEN_RESPONSES = {
         'description': 'The reset password token is incorrect.',
         'content': {
             'application/json': {
-                'example': APIException.not_found("The reset password token is incorrect.", translation_key="resetPasswordTokenIsNotValid"),
+                'example': APIException.not_found("The reset password token is incorrect.",
+                                                  translation_key="resetPasswordTokenIsNotValid"),
                 'schema': APIExceptionModel.schema()
             }
         }

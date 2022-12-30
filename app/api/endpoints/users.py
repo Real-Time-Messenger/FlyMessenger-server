@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, UploadFile, File, Response
 from fastapi.encoders import jsonable_encoder
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from app.common.swagger.responses.users import GET_ME_RESPONSES, GET_MY_SESSIONS_RESPONSES, \
     GET_MY_BLOCKED_USERS_RESPONSES, UPDATE_ME_RESPONSES, UPDATE_MY_AVATAR_RESPONSES, BLACKLIST_USER_RESPONSES
-from app.core.ouath.main import get_current_user
+from app.common.swagger.responses.users.delete_me import DELETE_ME_RESPONSES
+from app.core.ouath.main import get_current_user, oauth2_scheme
 from app.database.main import get_database
 from app.exception.body import APIRequestValidationException
 from app.models.common.exceptions.body import RequestValidationDetails
@@ -209,6 +210,30 @@ async def block_or_unblock_user(
         blacklist=user.blacklist,
         user_id=body.blacklisted_user_id
     )
+
+@router.delete(
+    path="/me",
+    responses=DELETE_ME_RESPONSES
+)
+async def delete_me(
+        response: Response,
+        token: str = Depends(oauth2_scheme),
+        current_user: UserModel = Depends(get_current_user),
+        db: AsyncIOMotorClient = Depends(get_database)
+) -> None:
+    """
+    Delete current user.
+
+    **Note**: This endpoint is protected by OAuth2 scheme. It requires a valid access token to be sent in the **Authorization** header or cookie.
+    """
+    token = token.replace("Bearer ", "")
+    await UserSessionService.delete(current_user, token, db)
+
+    response.delete_cookie(key="Authorization")
+
+    await UserService.delete(current_user, db)
+
+    return None
 
 # @router.delete(
 #     path="/me/blacklist/{blacklisted_user_id}"

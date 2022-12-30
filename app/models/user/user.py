@@ -1,23 +1,16 @@
 from datetime import datetime
-from typing import Union, Optional, Annotated
+from typing import Union, Optional
 
-from email_validator import validate_email, EmailNotValidError
-from fastapi import Query
-
-from pydantic import BaseModel, Field, EmailStr, validator, root_validator, SecretStr
+from pydantic import BaseModel, Field, EmailStr, validator, root_validator, SecretStr, constr
 
 from app.common.pydantic.validators import username_validator, password_validator, passwords_match_validator, \
     email_validator, password_confirm_validator, first_name_validator, last_name_validator
-from app.exception.api import APIException
-from app.models.common.exceptions.body import NotCorrectLength, EmailIsNotValidType
 from app.models.common.mongo.base_model import MongoModel
 from app.models.common.object_id import PyObjectId
 from app.models.user.blacklist import BlacklistedUserModel, BlacklistedUserInResponseModel
 from app.models.user.sessions import UserSessionModel, UserSessionInResponseModel
 from app.models.user.settings import UserSettingsModel, UserSettingsUpdateModel
 from app.services.hash.hash import HashService
-
-
 
 
 class UserModel(MongoModel):
@@ -29,7 +22,7 @@ class UserModel(MongoModel):
     password: str = Field(...)
     first_name: str = Field(..., min_length=3, max_length=25, alias="firstName")
     last_name: Optional[str] = Field(default=None, max_length=25, alias="lastName")
-    is_active: bool = Field(default=False ,alias="isActive")
+    is_active: bool = Field(default=False, alias="isActive")
     photo_url: Optional[str] = Field(alias="photoURL")
     is_online: Optional[bool] = Field(default=True, alias="isOnline")
     last_activity: Optional[datetime] = Field(default=None, alias="lastActivity")
@@ -57,7 +50,7 @@ class UserModel(MongoModel):
 class UserInSignUpModel(MongoModel):
     """ Model for sign up user. """
 
-    username: str = Field(...)
+    username: constr(to_lower=True) = Field(...)
     email: EmailStr = Field(...)
     password: str = Field(...)
     password_confirm: str = Field(..., alias="passwordConfirm")
@@ -73,7 +66,7 @@ class UserInSignUpModel(MongoModel):
 class UserInLoginModel(BaseModel):
     """ Model for login user. """
 
-    username: Union[str, EmailStr] = Field(..., example="username")
+    username: Union[constr(to_lower=True), EmailStr] = Field(..., example="username")
     password: SecretStr = Field(..., example="password")
 
     # Validators
@@ -148,6 +141,7 @@ class UserInCallResetPasswordModel(BaseModel):
 class UserInResetPasswordModel(BaseModel):
     """ Model for reset password. """
 
+    token: str = Field(...)
     password: str = Field(...)
     password_confirm: str = Field(..., alias="passwordConfirm")
 
