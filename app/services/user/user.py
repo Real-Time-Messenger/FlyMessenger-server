@@ -236,19 +236,6 @@ class UserService:
         return UserModel.from_mongo(user)
 
     @staticmethod
-    async def activate(current_user: UserModel, db: AsyncIOMotorClient) -> None:
-        """
-        Activate user account.
-
-        :param current_user: User object.
-        :param db: Database connection object.
-        """
-
-        current_user.is_active = True
-
-        await UserService.update(current_user, db)
-
-    @staticmethod
     async def get_by_two_factor_code(code: str, db: AsyncIOMotorClient) -> Optional[UserModel]:
         """
         Get user by two-factor code.

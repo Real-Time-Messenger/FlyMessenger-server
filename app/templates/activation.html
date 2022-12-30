@@ -1,3 +1,21 @@
-<span>Hello, {{username}}</span>
+{% extends "base/_header.html" %}
 
-<a href="{{url}}">Click to activate</a>
+{% block content %}
+    <div style="width: 400px; border-radius: 5px; padding: 30px 35px; background-color: #FFFFFF !important; margin: 0 auto;">
+        <div style="display: flex; align-items: center; gap: 5px; justify-content: center;">
+            <img src="http://localhost:8000/public/logo.png" alt="" width="30">
+
+            <span class="fly-messenger_title" style="font-size: 20px; font-weight: 600; color: #161616;">Fly Messenger</span>
+        </div>
+
+        <div>
+            <div style="display: block; margin-bottom: 20px;">
+                Hello, <b>{{ username }}</b>
+            </div>
+
+            <div style="display: block; margin-bottom: 20px;">
+                Here is you activation link: <a href="{{ url }}">Click to activate</a>
+            </div>
+        </div>
+    </div>
+{% endblock content %}

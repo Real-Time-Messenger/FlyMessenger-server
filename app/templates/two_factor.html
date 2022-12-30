@@ -1,7 +1,26 @@
-<p>
-    Two-factor authentication is enabled for your account. To disable it, enter your password below.
-</p>
+{% extends "base/_header.html" %}
 
-<span>
-    {{ secret }}
-</span>
+{% block content %}
+    <div style="width: 400px; border-radius: 5px; padding: 30px 35px; background-color: #FFFFFF !important; margin: 0 auto;">
+        <div style="display: flex; align-items: center; gap: 5px; justify-content: center;">
+            <img src="http://localhost:8000/public/logo.png" alt="" width="30">
+
+            <span class="fly-messenger_title"
+                  style="font-size: 20px; font-weight: 600; color: #161616;">Fly Messenger</span>
+        </div>
+
+        <div>
+            <div style="display: block; margin-bottom: 20px;">
+                Hello, <b>{{ username }}</b>
+            </div>
+
+            <div style="display: block; margin-bottom: 20px;">
+                To continue authorization, you need to provide a two-factor authentication code.
+            </div>
+
+            <div style="display: block; margin-bottom: 20px;">
+                <span>Yours code: <b>{{ secret }}</b></span>
+            </div>
+        </div>
+    </div>
+{% endblock content %}

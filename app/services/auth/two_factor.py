@@ -20,11 +20,12 @@ class TwoFactorService:
     """
 
     @staticmethod
-    async def generate_secret(email: EmailStr) -> str:
+    async def generate_secret(user: UserModel, db: AsyncIOMotorClient) -> str:
         """
         Generate two-factor code and send it to user email.
 
-        :param email: User email.
+        :param user: User Instance.
+        :param db: Database connection.
 
         :return: Two-factor authentication secret.
         """
@@ -32,11 +33,15 @@ class TwoFactorService:
         secret = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
         await EmailService.send_email(
-            email=email,
-            subject="Two factor authentication",
-            template="two_factor",
+            user.email,
+            "Two-factor authentication",
+            "two_factor",
+            username=user.username,
             secret=secret
         )
+
+        user.two_factor_code = secret
+        await UserService.update(user, db)
 
         return secret
 

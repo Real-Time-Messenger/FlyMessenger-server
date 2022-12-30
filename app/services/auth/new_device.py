@@ -21,11 +21,12 @@ class NewDeviceService:
     """
 
     @staticmethod
-    async def generate_secret(email: EmailStr) -> str:
+    async def generate_secret(user: UserModel, db: AsyncIOMotorClient) -> str:
         """
         Generate secret and send it to user email.
 
-        :param email: User email.
+        :param user: User Instance.
+        :param db: Database connection.
 
         :return: New device secret.
         """
@@ -33,11 +34,15 @@ class NewDeviceService:
         secret = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
         await EmailService.send_email(
-            email=email,
-            subject="New device authentication",
-            template="new_device",
+            user.email,
+            "Authentication on a new device",
+            "new_device",
+            username=user.username,
             secret=secret
         )
+
+        user.new_device_code = secret
+        await UserService.update(user, db)
 
         return secret
 

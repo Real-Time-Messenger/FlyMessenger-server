@@ -70,28 +70,21 @@ class AuthService:
 
         user = await UserService.authenticate(body.username, body.password.get_secret_value(), db)
         if not user:
-            raise APIException.not_found("The username or password is incorrect.",
-                                         translation_key="incorrectUsernameOrPassword")
+            raise APIException.not_found(
+                "The username or password is incorrect.",
+                translation_key="incorrectUsernameOrPassword"
+            )
 
         is_user_foreign = await UserSessionService.is_foreign_user(user, request)
         if is_user_foreign:
-            new_device_code = await NewDeviceService.generate_secret(user.email)
-
-            user.new_device_code = new_device_code
-            await UserService.update(user, db)
+            await NewDeviceService.generate_secret(user, db)
 
             return UserInEventResponseModel(event=AuthResponseType.NEW_DEVICE)
 
         if user.settings.two_factor_enabled:
-            two_factor_code = await TwoFactorService.generate_secret(user.email)
-
-            user.two_factor_code = two_factor_code
-            await UserService.update(user, db)
+            await TwoFactorService.generate_secret(user, db)
 
             return UserInEventResponseModel(event=AuthResponseType.TWO_FACTOR)
-
-        if not user.is_active:
-            return UserInEventResponseModel(event=AuthResponseType.ACTIVATION_REQUIRED)
 
         token = TokenService.generate_access_token(id=user.id)
         await UserSessionService.create(user, token, request, db)
@@ -141,8 +134,11 @@ class AuthService:
 
         user = await UserService.create(body, db)
 
-        user.activation_token = TokenService.generate_custom_token(timedelta(hours=1), id=user.id, type="activation")
-
+        user.activation_token = TokenService.generate_custom_token(
+            timedelta(hours=1),
+            id=user.id,
+            type="activation"
+        )
         await UserService.update(user, db)
 
         await EmailService.send_email(
@@ -166,28 +162,43 @@ class AuthService:
 
         decoded_token = TokenService.decode(body.token)
         if not decoded_token:
-            raise APIException.bad_request("Invalid activation code.", translation_key="invalidActivationCode")
+            raise APIException.bad_request(
+                "Invalid activation code.",
+                translation_key="invalidActivationCode"
+            )
 
         decoded_token = decoded_token.get("payload")
         if decoded_token.get("type") != "activation":
-            raise APIException.bad_request("Invalid activation code.", translation_key="invalidActivationCode")
+            raise APIException.bad_request(
+                "Invalid activation code.",
+                translation_key="invalidActivationCode"
+            )
 
         expiration_time = TokenService.get_token_expiration(body.token)
         if expiration_time < datetime.now():
-            raise APIException.bad_request("Activation code is expired.", translation_key="activationCodeIsExpired")
+            raise APIException.bad_request(
+                "Activation code is expired.",
+                translation_key="activationCodeIsExpired"
+            )
 
         user_id = PyObjectId(decoded_token.get("id"))
         user = await UserService.get_by_id(user_id, db)
         if not user:
-            raise APIException.bad_request("Invalid activation code.", translation_key="invalidActivationCode")
+            raise APIException.bad_request(
+                "Invalid activation code.",
+                translation_key="invalidActivationCode"
+            )
 
         if user.is_active:
-            raise APIException.bad_request("Account is already activated.",
-                                           translation_key="accountIsAlreadyActivated")
+            raise APIException.bad_request(
+                "Account is already activated.",
+                translation_key="accountIsAlreadyActivated"
+            )
 
         user.activation_token = None
+        user.is_active = True
 
-        await UserService.activate(user, db)
+        await UserService.update(user, db)
 
     @staticmethod
     async def call_reset_password(body: UserInCallResetPasswordModel, db: AsyncIOMotorClient) -> None:
@@ -200,18 +211,30 @@ class AuthService:
 
         user = await UserService.get_by_email(body.email, db)
         if not user:
-            raise APIException.not_found("User with this email does not exist.", translation_key="userDoesNotExist")
+            raise APIException.not_found(
+                "User with this email does not exist.",
+                translation_key="userDoesNotExist"
+            )
 
         if not user.is_active:
             raise USER_NOT_ACTIVATED
 
-        token = TokenService.generate_custom_token(timedelta(hours=1), type="reset_password", id=user.id)
+        token = TokenService.generate_custom_token(
+            timedelta(hours=1),
+            type="reset_password",
+            id=user.id
+        )
 
         user.reset_password_token = token
-
         await UserService.update(user, db)
-        await EmailService.send_email(user.email, "Password recovery request", "reset_password",
-                                      url=f"{RESET_PASSWORD}?token={token}")
+
+        await EmailService.send_email(
+            user.email,
+            "Password recovery request",
+            "reset_password",
+            url=f"{RESET_PASSWORD}?token={token}",
+            username=user.username
+        )
 
     @staticmethod
     async def reset_password(body: UserInResetPasswordModel, db: AsyncIOMotorClient) -> None:
@@ -226,27 +249,37 @@ class AuthService:
 
         token_payload = TokenService.decode(body.token)
         if not token_payload:
-            raise APIException.bad_request("The reset password token is incorrect.",
-                                           translation_key="resetPasswordTokenIsNotValid")
+            raise APIException.bad_request(
+                "The reset password token is incorrect.",
+                translation_key="resetPasswordTokenIsNotValid"
+            )
 
         user_id = token_payload.get("payload").get("id")
         if not user_id:
-            raise APIException.bad_request("The reset password token is incorrect.",
-                                           translation_key="resetPasswordTokenIsNotValid")
+            raise APIException.bad_request(
+                "The reset password token is incorrect.",
+                translation_key="resetPasswordTokenIsNotValid"
+            )
 
         user = await UserService.get_by_id(PyObjectId(user_id), db)
         if not user:
-            raise APIException.not_found("The reset password token is incorrect.",
-                                         translation_key="resetPasswordTokenIsNotValid")
+            raise APIException.not_found(
+                "The reset password token is incorrect.",
+                translation_key="resetPasswordTokenIsNotValid"
+            )
 
         token_expiration = TokenService.get_token_expiration(body.token)
         if token_expiration < datetime.utcnow():
-            raise APIException.forbidden("The reset password token is expired.",
-                                         translation_key="resetPasswordTokenIsExpired")
+            raise APIException.forbidden(
+                "The reset password token is expired.",
+                translation_key="resetPasswordTokenIsExpired"
+            )
 
         if HashService.verify_password(body.password, user.password):
-            raise APIException.bad_request("You cannot use the same password as before.",
-                                           translation_key="cannotUseSamePassword")
+            raise APIException.bad_request(
+                "You cannot use the same password as before.",
+                translation_key="cannotUseSamePassword"
+            )
 
         user.password = HashService.get_hash(body.password)
         # user.reset_password_token = None
