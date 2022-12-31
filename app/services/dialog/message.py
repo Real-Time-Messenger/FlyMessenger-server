@@ -93,7 +93,7 @@ class DialogMessageService:
         :return: Dialog message object.
         """
 
-        dialogs = db[DIALOG_MESSAGES_COLLECTION].find({"dialogId": dialog_id}).limit(100)
+        dialogs = db[DIALOG_MESSAGES_COLLECTION].find({"dialogId": dialog_id}).sort("sentAt", -1).limit(100)
         if not dialogs:
             return []
 
@@ -119,7 +119,8 @@ class DialogMessageService:
         for message in messages:
             sender = await UserService.get_by_id(message.sender_id, db)
 
-            result.append(
+            result.insert(
+                0,
                 DialogMessageInResponseModel(
                     sender=SenderInDialogMessageModel(**sender.dict()),
                     sent_at=message.sent_at,
@@ -269,13 +270,14 @@ class DialogMessageService:
 
         result = []
 
-        messages = db[DIALOG_MESSAGES_COLLECTION].find({"dialogId": dialog_id}).skip(skip).limit(limit)
+        messages = db[DIALOG_MESSAGES_COLLECTION].find({"dialogId": dialog_id}).sort("sentAt", -1).skip(skip).limit(limit)
         for message in await messages.to_list(length=limit):
             message = DialogMessageModel.from_mongo(message)
 
             sender = await UserService.get_by_id(message.sender_id, db)
 
-            result.append(
+            result.insert(
+                0,
                 DialogMessageInResponseModel(
                     sender=SenderInDialogMessageModel(**sender.dict()),
                     sent_at=message.sent_at,

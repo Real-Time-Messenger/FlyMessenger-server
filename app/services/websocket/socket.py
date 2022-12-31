@@ -1,5 +1,4 @@
 import json
-from datetime import datetime
 
 from fastapi.encoders import jsonable_encoder
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -71,21 +70,21 @@ class SocketService(SocketBase):
         elif user_type == SocketReceiveTypesEnum.TYPING:
             recipient_id = await self._get_recipient_id(user_id, dialog_id, db)
 
-            await self._send_personal_message([recipient_id],{
+            await self._send_personal_message_by_user_id({
                 "type": SocketSendTypesEnum.TYPING,
                 "dialogId": str(dialog_id),
-            })
+            }, recipient_id)
 
         elif user_type == SocketReceiveTypesEnum.UNTYPING:
             recipient_id = await self._get_recipient_id(user_id, dialog_id, db)
 
             recipient = await UserService.get_by_id(recipient_id, db)
 
-            await self._send_personal_message([recipient_id], {
+            await self._send_personal_message_by_user_id({
                 "type": SocketSendTypesEnum.UNTYPING,
                 "dialogId": str(dialog_id),
                 "status": recipient.is_online,
-            })
+            }, recipient_id)
 
         elif user_type == SocketReceiveTypesEnum.DESTROY_SESSION:
             current_session = await UserSessionService.get_by_token(token, db)
@@ -100,17 +99,26 @@ class SocketService(SocketBase):
 
             built_user = await UserService.build_user_response(user, db)
 
-            connections = self.find_connections_by_user_id(user_id)
-            for connection in connections:
+            connection = self.find_connection_by_token(session.token)
+            if not connection:
+                await UserSessionService.delete(user, session.token, db)
+                return
 
-                await self._send_personal_message([user_id], {
-                    "type": SocketSendTypesEnum.USER_LOGOUT,
-                    "currentSessionId": str(connection.token),
-                    "sessionId": str(session.token),
-                    "user": jsonable_encoder(UserInResponseModel(**built_user.dict())),
-                })
+            # Send message to user about destroying session.
+            await connection.websocket.send_json({
+                "type": SocketSendTypesEnum.USER_LOGOUT,
+                "currentSessionId": str(connection.token),
+                "sessionId": str(session.token),
+            })
 
-                await UserService.update(user, db)
+            # Send message to websocket user about successful destroying session.
+            await websocket.send_json({
+                "type": SocketSendTypesEnum.USER_LOGOUT,
+                "success": True,
+                "user": jsonable_encoder(UserInResponseModel(**built_user.dict()))
+            })
+
+            await UserService.update(user, db)
 
     async def _get_recipient_id(
             self,
@@ -176,18 +184,20 @@ class SocketService(SocketBase):
         dialog = await DialogService.get_by_id(dialog_id, db)
         dialog = await DialogService.build_dialog(dialog, current_user, db)
 
+        del dialog.messages
+
         dialog_data = {
             "isNotificationsEnabled": dialog.is_notifications_enabled,
             "isSoundEnabled": dialog.is_sound_enabled,
         }
 
-        await self._send_personal_message([user_id, recipient_id], {
+        await self._send_personal_message_by_user_id({
             "type": SocketSendTypesEnum.RECEIVE_MESSAGE,
             "message": await DialogMessageService.build_message(new_message, db),
             "dialog": dialog,
             "dialogData": dialog_data,
             "userId": str(user_id),
-        })
+        }, user_id, recipient_id)
 
     async def _handle_read_message(
             self,
@@ -209,11 +219,11 @@ class SocketService(SocketBase):
 
         recipient_id = await self._get_recipient_id(user_id, dialog_id, db)
 
-        await self._send_personal_message([user_id, recipient_id], {
+        await self._send_personal_message_by_user_id({
             "type": SocketSendTypesEnum.READ_MESSAGE,
             "messageId": str(message.id),
             "dialogId": str(dialog_id),
-        })
+        }, user_id, recipient_id)
 
     async def _handle_toggle_online_status(
             self,

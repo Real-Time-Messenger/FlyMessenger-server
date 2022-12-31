@@ -24,9 +24,6 @@ async def test_login(
     """
 
     user = await UserService.authenticate(body.username, body.password.get_secret_value(), db)
-    if user is None:
-        raise APIException.not_found("The username or password is incorrect.",
-                                     translation_key="incorrectUsernameOrPassword")
 
     if len(user.sessions) > 0:
         session = user.sessions[-1]

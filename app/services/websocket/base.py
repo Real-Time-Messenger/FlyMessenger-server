@@ -89,7 +89,10 @@ class SocketBase:
         for connection in self.connections:
             if connection.websocket == websocket:
                 self.connections.remove(connection)
-                await websocket.close()
+                try:
+                    await websocket.close()
+                except Exception:
+                    pass
                 break
 
     def find_connection(self, user_id: PyObjectId) -> Optional[ConnectionModel]:
@@ -140,18 +143,54 @@ class SocketBase:
                 # If an error occurred, disconnect the user.
                 await self.disconnect(connection.websocket)
 
-    async def _send_personal_message(self, user_ids: list[PyObjectId], message: dict) -> None:
+    async def _send_personal_message_by_websocket(self, message: dict, *websockets) -> None:
         """
         Send message to specific users.
+
+        :param message: Message to send.
+        :param websockets: The list of websocket's to send the message to.
+        """
+
+        for websocket in websockets:
+            await self._send_message(message, websocket=websocket)
+
+    async def _send_personal_message_by_user_id(self, message: dict, *user_ids: PyObjectId) -> None:
+        """
+        Send message to specific users (all connections with the same user ID).
 
         :param message: Message to send.
         :param user_ids: The list of user ID's to send the message to.
         """
 
         for user_id in user_ids:
-            await self._send_message(message, user_id=user_id)
+            await self._send_message_to_user_id(message, user_id=user_id)
 
     async def _send_message(self, message: dict, **kwargs) -> None:
+        """
+        Send message to specific user.
+
+        :param message: Message to send.
+        :param kwargs: Keyword arguments.
+        """
+
+        user_id = kwargs.get("user_id")
+        websocket = kwargs.get("websocket")
+
+        if user_id:
+            connections = self.find_connection(user_id)
+            for connection in connections:
+                try:
+                    await connection.websocket.send_json(jsonable_encoder(message))
+                except Exception:
+                    print(connection)
+                    await self.disconnect(connection.websocket)
+        elif websocket:
+            try:
+                await websocket.send_json(jsonable_encoder(message))
+            except Exception:
+                await self.disconnect(websocket)
+
+    async def _send_message_to_user_id(self, message: dict, **kwargs) -> None:
         """
         Send message to specific user.
 
@@ -185,7 +224,7 @@ class SocketBase:
         if not isinstance(user_ids, list):
             user_ids = [user_ids]
 
-        await self._send_personal_message(user_ids, {
+        await self._send_personal_message_by_user_id(user_ids, {
             "type": event_type,
             **message
         })
@@ -223,3 +262,17 @@ class SocketBase:
             return False
 
         return True
+
+    def find_connection_by_token(self, token: str) -> Optional[ConnectionModel]:
+        """
+        Find connection by token.
+
+        :param token: Token.
+        :return: ConnectionModel or None (if connection not found).
+        """
+
+        for connection in self.connections:
+            if connection.token == token:
+                return connection
+
+        return None

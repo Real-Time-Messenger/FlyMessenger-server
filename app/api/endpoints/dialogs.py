@@ -76,6 +76,7 @@ async def get_dialog_messages(
 
     **Note:** This endpoint is protected by OAuth2 scheme. It requires a valid access token to be sent in the **Authorization** header or cookie.
     """
+
     return await DialogMessageService.get_dialog_messages(dialog_id, body.skip, body.limit, db)
 
 

@@ -57,3 +57,5 @@ class UserSettingsUpdateModel(MongoModel):
     chats_sound_enabled: Optional[bool] = Field(None, alias="chatsSoundEnabled")
     conversations_sound_enabled: Optional[bool] = Field(None, alias="conversationsSoundEnabled")
     groups_sound_enabled: Optional[bool] = Field(None, alias="groupsSoundEnabled")
+
+    last_activity_mode: bool = Field(default=True, alias="lastActivityMode")

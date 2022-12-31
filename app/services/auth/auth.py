@@ -69,11 +69,6 @@ class AuthService:
         """
 
         user = await UserService.authenticate(body.username, body.password.get_secret_value(), db)
-        if not user:
-            raise APIException.not_found(
-                "The username or password is incorrect.",
-                translation_key="incorrectUsernameOrPassword"
-            )
 
         is_user_foreign = await UserSessionService.is_foreign_user(user, request)
         if is_user_foreign:

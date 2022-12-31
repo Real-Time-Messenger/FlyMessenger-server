@@ -58,10 +58,15 @@ class UserService:
         user = await UserService.get_by_username(username, db) or await UserService.get_by_email(username, db)
         if not user:
             raise APIException.not_found(
-                "We couldn't find an account with that username or email. Please check your credentials and try again.")
+                "We couldn't find an account with that username or email. Please check your credentials and try again.",
+                translation_key="userNotFound"
+            )
 
         if not HashService.verify_password(password, user.password):
-            raise APIException.unauthorized("Incorrect password. Please try again.")
+            raise APIException.unauthorized(
+                "Wrong password. Check your credentials and try again.",
+                translation_key="incorrectPassword"
+            )
 
         if not user.is_active:
             token_expiration = TokenService.get_token_expiration(user.activation_token) or None
