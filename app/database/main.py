@@ -11,27 +11,40 @@ assert DATABASE_URL is not None
 DATABASE_NAME = os.getenv("DATABASE_NAME")
 assert DATABASE_NAME is not None
 
+
 class DatabaseConnection:
     """
-    Database connection model.
-
-    Need only at the connection to the database.
+    Database Connection Model.
     """
 
     client: AsyncIOMotorClient = None
 
 
 db = DatabaseConnection()
+test_db = DatabaseConnection()
 
 
 def get_database() -> AsyncIOMotorClient:
     """
-    Get the database connection.
+    Get the Database Connection.
 
-    :return: Database connection
+    :return: Database Connection.
     """
 
     if db.client is None:
         db.client = AsyncIOMotorClient(DATABASE_URL)
 
     return db.client[DATABASE_NAME]
+
+
+def get_test_database() -> AsyncIOMotorClient:
+    """
+    Get the Test Database Connection.
+
+    :return: Test Database Connection.
+    """
+
+    if test_db.client is None:
+        test_db.client = AsyncIOMotorClient(DATABASE_URL)
+
+    return test_db.client["test_" + DATABASE_NAME]

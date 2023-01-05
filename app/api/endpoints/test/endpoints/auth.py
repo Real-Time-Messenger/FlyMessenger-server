@@ -1,10 +1,8 @@
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from app.database.main import get_database
-from app.exception.api import APIException
 from app.models.user.user import UserInLoginModel, UserInAuthResponseModel
-from app.services.auth.auth import AuthService
 from app.services.token.token import TokenService
 from app.services.user.sessions import UserSessionService
 from app.services.user.user import UserService
