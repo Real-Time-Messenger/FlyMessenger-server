@@ -68,3 +68,20 @@ class ImageService:
             f.write(content)
 
         return ImageService._url(image_name, folder)
+
+    @staticmethod
+    async def upload_bytes_image(file: bytes, folder: str = 'uploads') -> str:
+        """
+        Upload image from bytes.
+
+        :param file: Bytes file.
+
+        :return: Image URL.
+        """
+
+        image_name = f'{uuid4()}.png'
+        with open(f'{PUBLIC_FOLDER}/{folder}/{image_name}', 'wb', encoding="utf-8") as f:
+            print(file)
+            f.write(file)
+
+        return ImageService._url(image_name, folder)

@@ -76,7 +76,9 @@ class SocketBase:
         except InvalidObjectId:
             return False
 
-        self.connections.append(ConnectionModel(token=authorization, websocket=websocket, user_id=user_id))
+        connection = self.find_connection(user_id)
+        if connection is None:
+            self.connections.append(ConnectionModel(token=authorization, websocket=websocket, user_id=user_id))
 
     async def disconnect(self, websocket: WebSocket) -> None:
         """
@@ -203,6 +205,7 @@ class SocketBase:
         connections = self.find_connections_by_user_id(user_id)
         for connection in connections:
             try:
+                pass
                 await connection.websocket.send_json(jsonable_encoder(message))
             except Exception:
                 await self.disconnect(connection.websocket)
@@ -224,10 +227,10 @@ class SocketBase:
         if not isinstance(user_ids, list):
             user_ids = [user_ids]
 
-        await self._send_personal_message_by_user_id(user_ids, {
+        await self._send_personal_message_by_user_id({
             "type": event_type,
             **message
-        })
+        }, *user_ids)
 
     async def check_if_user_can_send_message(
             self,

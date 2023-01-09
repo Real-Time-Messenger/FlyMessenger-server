@@ -78,12 +78,9 @@ class SocketService(SocketBase):
         elif user_type == SocketReceiveTypesEnum.UNTYPING:
             recipient_id = await self._get_recipient_id(user_id, dialog_id, db)
 
-            recipient = await UserService.get_by_id(recipient_id, db)
-
             await self._send_personal_message_by_user_id({
                 "type": SocketSendTypesEnum.UNTYPING,
                 "dialogId": str(dialog_id),
-                "status": recipient.is_online,
             }, recipient_id)
 
         elif user_type == SocketReceiveTypesEnum.DESTROY_SESSION:

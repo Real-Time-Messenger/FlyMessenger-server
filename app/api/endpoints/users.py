@@ -1,3 +1,5 @@
+from typing import Union
+
 from fastapi import APIRouter, Depends, UploadFile, File, Response
 from fastapi.encoders import jsonable_encoder
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -14,6 +16,7 @@ from app.models.socket.utils import SendBlockedMessageToClient
 from app.models.user.blacklist import BlacklistInCreateModel, BlacklistedUserInResponseModel
 from app.models.user.sessions import UserSessionInResponseModel, UserSessionTypesEnum
 from app.models.user.user import UserModel, UserInUpdateModel, UserInResponseModel
+from app.services.image.image import ImageService
 from app.services.user.blacklist import BlacklistService
 from app.services.user.sessions import UserSessionService
 from app.services.user.user import UserService
@@ -132,7 +135,7 @@ async def update_me(
     responses=UPDATE_MY_AVATAR_RESPONSES
 )
 async def update_avatar(
-        file: UploadFile = File(..., content_type="image/png, image/jpeg, image/jpg"),
+        file: Union[UploadFile, bytes] = File(..., content_type="image/png, image/jpeg, image/jpg"),
         current_user: UserModel = Depends(get_current_user),
         db: AsyncIOMotorClient = Depends(get_database)
 ):
@@ -147,6 +150,15 @@ async def update_avatar(
 
     max_file_size = 1024 * 1024 * 5  # 5 MB
     allowed_extensions = ["jpg", "jpeg", "png"]
+
+    # Allow add image from bytes array.
+    if isinstance(file, bytes):
+        filename = await ImageService.upload_bytes_image(file, "avatars")
+
+        current_user.photo_url = filename
+        await UserService.update(current_user, db)
+
+        return await UserService.build_user_response(current_user, db)
 
     error = None
     if file.filename.split(".")[-1] not in allowed_extensions:
@@ -234,15 +246,3 @@ async def delete_me(
     await UserService.delete(current_user, db)
 
     return None
-
-# @router.delete(
-#     path="/me/blacklist/{blacklisted_user_id}"
-# )
-# async def unblock_user(
-#         blacklisted_user_id: str,
-#         current_user: UserModel = Depends(get_current_user),
-#         db: AsyncIOMotorClient = Depends(get_database)
-# ) -> Union[list[BlacklistedUserInResponseModel], list]:
-#     await BlacklistService.unblock_user(blacklisted_user_id, current_user, db)
-#
-#     return [await BlacklistService.build_blacklisted_user(blacklist_model, db) for blacklist_model in current_user.blacklist]

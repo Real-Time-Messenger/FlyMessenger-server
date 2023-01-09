@@ -70,6 +70,8 @@ async def validation_exception_handler(_: Request, exc: RequestValidationError):
                     "ctx") is not None and "translation_key" in error.get("ctx") else None,
             ))
 
+    print(errors)
+
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=jsonable_encoder(
@@ -115,13 +117,12 @@ async def websocket_endpoint(
 ):
     """ Websocket endpoint. """
 
-    if await socket_service.accept(websocket, credentials) is False:
-        await websocket.close()
-        return
-
     try:
+        await socket_service.accept(websocket, credentials)
+
         while True:
             data = await websocket.receive_text()
             await socket_service.handle_connection(websocket, data, credentials, db)
     except WebSocketDisconnect:
+        print("wtf?")
         await socket_service.disconnect(websocket)
