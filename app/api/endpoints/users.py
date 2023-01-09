@@ -93,7 +93,6 @@ async def update_me(
     Update current user.
 
     **User fields that can be updated:**
-    * **username**: Username (string,, min length: 3 max length: 50)
     * **email**: Email (string, min length: 3, max length: 25)
     * **firstName**: First name (string, min length: 3, max length: 25)
     * **lastName**: Last name (string, max length: 25)
@@ -109,7 +108,6 @@ async def update_me(
     * **conversationsSoundEnabled**: Conversations sound enabled (boolean)
     * **groupsSoundEnabled**: Groups sound enabled (boolean)
     * **lastActivityMode**: Last activity mode (boolean)
-    * **allowRunOnStartup**: Allow run on startup (boolean)
 
     **Note**: This endpoint is protected by OAuth2 scheme. It requires a valid access token to be sent in the **Authorization** header or cookie.
     """
