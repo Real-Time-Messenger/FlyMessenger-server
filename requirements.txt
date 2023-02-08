@@ -10,14 +10,8 @@ httpx~=0.23.1
 Jinja2~=3.1.2
 app~=0.0.1
 pytest~=7.2.0
-<<<<<<< HEAD
-<<<<<<< HEAD
 uvicorn~=0.20.0
 email_validator~=1.3.0
 fastapi-mail~=1.2.4
 python-multipart~=0.0.5
 websockets~=10.4
-=======
->>>>>>> e388b1605fb89a58c71abfc248c747bc4c3aeaec
-=======
->>>>>>> e388b1605fb89a58c71abfc248c747bc4c3aeaec

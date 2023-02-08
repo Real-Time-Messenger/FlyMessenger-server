@@ -16,11 +16,8 @@ from app.models.socket.utils import SendBlockedMessageToClient
 from app.models.user.blacklist import BlacklistInCreateModel, BlacklistedUserInResponseModel
 from app.models.user.sessions import UserSessionInResponseModel, UserSessionTypesEnum
 from app.models.user.user import UserModel, UserInUpdateModel, UserInResponseModel
-<<<<<<< HEAD
 from app.services.dialog.dialog import DialogService
 from app.services.dialog.message import DialogMessageService
-=======
->>>>>>> e388b1605fb89a58c71abfc248c747bc4c3aeaec
 from app.services.image.image import ImageService
 from app.services.user.blacklist import BlacklistService
 from app.services.user.sessions import UserSessionService
@@ -167,16 +164,10 @@ async def update_avatar(
         filename = await ImageService.upload_bytes_image(file, "avatars")
 
         current_user.photo_url = filename
-<<<<<<< HEAD
         await ImageService.delete_image(current_user.photo_url, "avatars")
         await UserService.update(current_user, db)
 
         return {"photoURL": filename}
-=======
-        await UserService.update(current_user, db)
-
-        return await UserService.build_user_response(current_user, db)
->>>>>>> e388b1605fb89a58c71abfc248c747bc4c3aeaec
 
     error = None
     if file.filename.split(".")[-1] not in allowed_extensions:
@@ -269,7 +260,6 @@ async def delete_me(
     await DialogMessageService.delete_all_messages(current_user.id, db)
     await UserService.delete(current_user, db)
 
-<<<<<<< HEAD
     response.delete_cookie(key="Authorization")
 
     dialog_data = []
@@ -284,6 +274,4 @@ async def delete_me(
     for connection in connections:
         socket_service.disconnect(connection.websocket)
 
-=======
->>>>>>> e388b1605fb89a58c71abfc248c747bc4c3aeaec
     return None

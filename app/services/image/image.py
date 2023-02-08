@@ -79,7 +79,6 @@ class ImageService:
 
         image_name = f'{uuid4()}.png'
         with open(f'{PUBLIC_FOLDER}/{folder}/{image_name}', 'wb', encoding="utf-8") as f:
-<<<<<<< HEAD
             f.write(file)
 
         return ImageService._url(image_name, folder)
@@ -98,9 +97,3 @@ class ImageService:
             os.remove(f'{PUBLIC_FOLDER}/{folder}/{url.split("/")[-1]}')
         except FileNotFoundError:
             pass
-=======
-            print(file)
-            f.write(file)
-
-        return ImageService._url(image_name, folder)
->>>>>>> e388b1605fb89a58c71abfc248c747bc4c3aeaec
