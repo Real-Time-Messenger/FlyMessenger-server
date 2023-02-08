@@ -25,7 +25,10 @@ archive.zip
 .*.sw?
 
 .env
+<<<<<<< HEAD
 
 public/avatars/*
 !public/avatars/default.png
 public/uploads/*
+=======
+>>>>>>> e388b1605fb89a58c71abfc248c747bc4c3aeaec
