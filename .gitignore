@@ -25,4 +25,7 @@ archive.zip
 .*.sw?
 
 .env
-.vercel
+
+public/avatars/*
+!public/avatars/default.png
+public/uploads/*

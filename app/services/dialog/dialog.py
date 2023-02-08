@@ -136,7 +136,7 @@ class DialogService:
 
     @staticmethod
     async def build_dialog(new_dialog: DialogModel, current_user: UserModel, db: AsyncIOMotorClient,
-                           last_message: Optional[DialogInResponseModel] = None) -> DialogInResponseModel:
+                           last_message: Optional[DialogInResponseModel] = None) -> Optional[DialogInResponseModel]:
         """
         Build dialog instance for response.
 
@@ -166,6 +166,8 @@ class DialogService:
 
         images = [message.file for message in messages if message.file]
 
+        dialog = new_dialog.from_user if new_dialog.from_user.id == current_user.id else new_dialog.to_user
+
         return DialogInResponseModel(
             last_message=last_message,
             images=images,
@@ -174,7 +176,7 @@ class DialogService:
             user=user_in_dialog,
             is_me_blocked=bool(is_me_blocked),
             id=new_dialog.id,
-            **new_dialog.from_user.dict(exclude={"id"}),
+            **dialog.dict(exclude={"id"})
         )
 
     @staticmethod
@@ -193,14 +195,15 @@ class DialogService:
         result = []
 
         for dialog in dialogs:
-            if query.lower() in dialog.user.first_name.lower() or query.lower() in dialog.user.last_name.lower():
+            if dialog.user.photo_url is not None and query.lower() in dialog.user.first_name.lower() or (
+                    dialog.user.last_name is not None and query.lower() in dialog.user.last_name.lower()):
                 result.append(dialog)
 
         return result
 
     @staticmethod
     async def update(dialog_id: PyObjectId, body: DialogInUpdateModel, current_user: UserModel,
-                     db: AsyncIOMotorClient) -> DialogInResponseModel:
+                     db: AsyncIOMotorClient) -> object:
         """
         Update dialog by ID.
 
@@ -219,23 +222,24 @@ class DialogService:
         dialog_user = dialog.from_user if dialog.from_user.id == current_user.id else dialog.to_user
 
         for key, value in body.dict(exclude_unset=True).items():
-
             # If user try to update isPinned state for dialog
             if key == DialogInUpdateModel.__fields__[key].name and value is not None:
                 pinned_dialogs_count = await DialogService.get_pinned_dialogs_count(current_user.id, db)
 
                 # Throw error if user already pinned 10 dialogs
-                if pinned_dialogs_count >= 10:
+                if pinned_dialogs_count == 10:
                     raise APIException.bad_request("You can't pin more than 10 dialogs.",
                                                    translation_key="cantPinMoreThan10Dialogs")
 
                 setattr(dialog_user, key, value)
 
-        dialog = DialogModel(**dialog.dict())
-
         await db[DIALOGS_COLLECTION].find_one_and_update({"_id": dialog.id}, {"$set": dialog.mongo()})
 
-        return await DialogService.build_dialog(dialog, current_user, db)
+        # return await DialogService.build_dialog(dialog, current_user, db)
+        return {
+            "dialogId": str(dialog.id),
+            "data": body.dict(exclude_unset=True, by_alias=True)
+        }
 
     @staticmethod
     async def get_pinned_dialogs_count(user_id: PyObjectId, db: AsyncIOMotorClient) -> int:
@@ -249,7 +253,11 @@ class DialogService:
         """
 
         return await db[DIALOGS_COLLECTION].count_documents(
-            {"$or": [{"fromUserId": user_id}, {"toUserId": user_id}], "isPinned": True})
+            {"$or": [
+                {"fromUser._id": user_id, "fromUser.isPinned": True},
+                {"toUser._id": user_id, "toUser.isPinned": True}
+            ]},
+        )
 
     @staticmethod
     async def delete(dialog_id: PyObjectId, current_user: UserModel, db: AsyncIOMotorClient) -> None:
@@ -272,3 +280,16 @@ class DialogService:
         await db[DIALOGS_COLLECTION].delete_one({"_id": dialog_id})
 
         await DialogMessageService.delete_by_dialog_id(dialog_id, db)
+
+    @staticmethod
+    async def delete_all_dialogs(user_id: PyObjectId, db: AsyncIOMotorClient) -> None:
+        """
+        Delete all dialogs for user.
+
+        :param current_user: Current user object.
+        :param db: Database connection object.
+        """
+
+        await db[DIALOGS_COLLECTION].delete_many({"$or": [{"fromUser._id": user_id}, {"toUser._id": user_id}]})
+
+        await DialogMessageService.delete_all_messages(user_id, db)

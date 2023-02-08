@@ -1,6 +1,7 @@
 from datetime import timedelta, datetime
 from typing import Union
 
+from email_validator import validate_email
 from fastapi import Request, Response
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -45,7 +46,7 @@ class AuthService:
             **cookie_options
         )
 
-        response.headers["Authorization"] = token
+        response.headers["Authorization"] = f"Bearer {token}"
 
     @staticmethod
     async def login(
@@ -65,7 +66,7 @@ class AuthService:
         :param response: Response object.
         :param db: Database object.
 
-        :return: **Token** (if the login success) or **UserInEventResponseModel(event=Union[AuthResponseType.NEW_DEVICE, AuthResponseType.TWO_FACTOR, AuthResponseType.ACTIVATION_REQUIRED])** (if the login was successful, but confirmation is required).
+        :return: **Token** (if the login success) or **AuthResponseType.NEW_DEVICE, AuthResponseType.TWO_FACTOR, AuthResponseType.ACTIVATION_REQUIRED** (if the login was successful, but confirmation is required).
         """
 
         user = await UserService.authenticate(body.username, body.password.get_secret_value(), db)
@@ -128,7 +129,6 @@ class AuthService:
             raise APIRequestValidationException.from_details([error])
 
         user = await UserService.create(body, db)
-
         user.activation_token = TokenService.generate_custom_token(
             timedelta(hours=1),
             id=user.id,
@@ -208,7 +208,7 @@ class AuthService:
         if not user:
             raise APIException.not_found(
                 "User with this email does not exist.",
-                translation_key="userDoesNotExist"
+                translation_key="userNotFound"
             )
 
         if not user.is_active:

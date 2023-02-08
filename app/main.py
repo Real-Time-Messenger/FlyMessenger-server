@@ -25,7 +25,7 @@ app = FastAPI(**swagger_obj)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -115,12 +115,13 @@ async def websocket_endpoint(
 ):
     """ Websocket endpoint. """
 
-    if await socket_service.accept(websocket, credentials) is False:
-        await websocket.close()
-        return
+    await socket_service.accept(websocket, credentials)
 
     try:
         while True:
+            if not websocket.client_state:
+                continue
+
             data = await websocket.receive_text()
             await socket_service.handle_connection(websocket, data, credentials, db)
     except WebSocketDisconnect:

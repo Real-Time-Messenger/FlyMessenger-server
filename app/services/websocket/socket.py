@@ -1,4 +1,5 @@
 import json
+from typing import Optional
 
 from fastapi.encoders import jsonable_encoder
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -45,7 +46,7 @@ class SocketService(SocketBase):
             return
 
         json_data = json.loads(message)
-        user_type = json_data.get("type")
+        user_type = json_data.get("type", "Type")
         user_id = PyObjectId(TokenService.decode(token).get("payload").get("id"))
         dialog_id = PyObjectId(json_data.get("dialogId"))
 
@@ -78,12 +79,9 @@ class SocketService(SocketBase):
         elif user_type == SocketReceiveTypesEnum.UNTYPING:
             recipient_id = await self._get_recipient_id(user_id, dialog_id, db)
 
-            recipient = await UserService.get_by_id(recipient_id, db)
-
             await self._send_personal_message_by_user_id({
                 "type": SocketSendTypesEnum.UNTYPING,
                 "dialogId": str(dialog_id),
-                "status": recipient.is_online,
             }, recipient_id)
 
         elif user_type == SocketReceiveTypesEnum.DESTROY_SESSION:
@@ -125,7 +123,7 @@ class SocketService(SocketBase):
             user_id: PyObjectId,
             dialog_id: PyObjectId,
             db: AsyncIOMotorClient
-    ) -> PyObjectId:
+    ) -> Optional[PyObjectId]:
         """
         Get recipient id.
 
@@ -139,8 +137,7 @@ class SocketService(SocketBase):
         dialog = await DialogService.get_by_id(dialog_id, db)
 
         if not dialog:
-            connection = self.find_connection(user_id)
-            await self.disconnect(connection.websocket)
+            return None
 
         return dialog.from_user.id if dialog.from_user.id != user_id else dialog.to_user.id
 
@@ -183,8 +180,7 @@ class SocketService(SocketBase):
 
         dialog = await DialogService.get_by_id(dialog_id, db)
         dialog = await DialogService.build_dialog(dialog, current_user, db)
-
-        del dialog.messages
+        dialog.messages = []
 
         dialog_data = {
             "isNotificationsEnabled": dialog.is_notifications_enabled,
@@ -240,6 +236,8 @@ class SocketService(SocketBase):
         """
 
         user = await UserOnlineStatusService.toggle_online_status(user_id, status, db)
+        if not user.settings.last_activity_mode:
+            status = None
 
         await self._send_global_message({
             "type": SocketSendTypesEnum.TOGGLE_ONLINE_STATUS.value,

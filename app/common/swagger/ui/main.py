@@ -42,12 +42,12 @@ swagger_obj = {
     },
     "info": {
         "x-logo": {
-            "url": "http://locahost:8000/public/logo.png",
+            "url": "http://locahost:8001/public/logo.png",
         }
     },
     "servers": [
         {
-            "url": "http://localhost:8000",
+            "url": "http://localhost:8001",
             "description": "Local server",
         }
     ],

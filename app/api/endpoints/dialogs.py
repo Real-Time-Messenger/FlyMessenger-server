@@ -89,7 +89,7 @@ async def update_dialog(
         dialog_id: PyObjectId = Path(alias="dialogId"),
         current_user: UserModel = Depends(get_current_user),
         db: AsyncIOMotorClient = Depends(get_database)
-) -> DialogInResponseModel:
+) -> object:
     """
     Update dialog
 

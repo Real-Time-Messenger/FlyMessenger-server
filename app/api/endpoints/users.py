@@ -1,3 +1,5 @@
+from typing import Union
+
 from fastapi import APIRouter, Depends, UploadFile, File, Response
 from fastapi.encoders import jsonable_encoder
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -14,6 +16,9 @@ from app.models.socket.utils import SendBlockedMessageToClient
 from app.models.user.blacklist import BlacklistInCreateModel, BlacklistedUserInResponseModel
 from app.models.user.sessions import UserSessionInResponseModel, UserSessionTypesEnum
 from app.models.user.user import UserModel, UserInUpdateModel, UserInResponseModel
+from app.services.dialog.dialog import DialogService
+from app.services.dialog.message import DialogMessageService
+from app.services.image.image import ImageService
 from app.services.user.blacklist import BlacklistService
 from app.services.user.sessions import UserSessionService
 from app.services.user.user import UserService
@@ -35,6 +40,7 @@ async def get_me(
 
     **Note**: This endpoint is protected by OAuth2 scheme. It requires a valid access token to be sent in the **Authorization** header or cookie.
     """
+
     return await UserService.build_user_response(current_user, db)
 
 
@@ -43,7 +49,8 @@ async def get_me(
     responses=GET_MY_SESSIONS_RESPONSES
 )
 async def get_my_sessions(
-        current_user: UserModel = Depends(get_current_user)
+        current_user: UserModel = Depends(get_current_user),
+        token: str = Depends(oauth2_scheme),
 ) -> list[UserSessionInResponseModel]:
     """
     Returns current user sessions.
@@ -51,13 +58,18 @@ async def get_my_sessions(
     **Note**: This endpoint is protected by OAuth2 scheme. It requires a valid access token to be sent in the **Authorization** header or cookie.
     """
 
-    sessions = [session for session in current_user.sessions if session.type != UserSessionTypesEnum.TEST]
+    # sessions = [session for session in current_user.sessions if session.type != UserSessionTypesEnum.TEST]
+    sessions = []
+    for session in current_user.sessions:
+        if session.type != UserSessionTypesEnum.TEST:
+            session_model = UserSessionInResponseModel(current=session.token == token, **session.dict())
+            sessions.append(session_model)
 
-    return [UserSessionInResponseModel(**session.dict()) for session in sessions]
+    return sessions
 
 
 @router.get(
-    path="/me/blocked-users",
+    path="/me/blacklist",
     responses=GET_MY_BLOCKED_USERS_RESPONSES
 )
 async def get_my_blocked_users(
@@ -67,7 +79,7 @@ async def get_my_blocked_users(
     result = []
 
     for blacklist_model in current_user.blacklist:
-        blacklisted_user = await BlacklistService.build_blacklisted_user(blacklist_model, db)
+        blacklisted_user = await BlacklistService.build_blacklisted_user(blacklist_model.blacklisted_user_id, db)
 
         if blacklisted_user is None:
             continue
@@ -85,12 +97,11 @@ async def update_me(
         body: UserInUpdateModel,
         current_user: UserModel = Depends(get_current_user),
         db: AsyncIOMotorClient = Depends(get_database)
-) -> UserInResponseModel:
+) -> object:
     """
     Update current user.
 
     **User fields that can be updated:**
-    * **username**: Username (string,, min length: 3 max length: 50)
     * **email**: Email (string, min length: 3, max length: 25)
     * **firstName**: First name (string, min length: 3, max length: 25)
     * **lastName**: Last name (string, max length: 25)
@@ -106,7 +117,6 @@ async def update_me(
     * **conversationsSoundEnabled**: Conversations sound enabled (boolean)
     * **groupsSoundEnabled**: Groups sound enabled (boolean)
     * **lastActivityMode**: Last activity mode (boolean)
-    * **allowRunOnStartup**: Allow run on startup (boolean)
 
     **Note**: This endpoint is protected by OAuth2 scheme. It requires a valid access token to be sent in the **Authorization** header or cookie.
     """
@@ -124,7 +134,8 @@ async def update_me(
 
     await UserService.update(current_user, db)
 
-    return await UserService.build_user_response(current_user, db)
+    # return await UserService.build_user_response(current_user, db)
+    return body.dict(exclude_unset=True, by_alias=True)
 
 
 @router.put(
@@ -132,10 +143,10 @@ async def update_me(
     responses=UPDATE_MY_AVATAR_RESPONSES
 )
 async def update_avatar(
-        file: UploadFile = File(..., content_type="image/png, image/jpeg, image/jpg"),
+        file: Union[UploadFile, bytes] = File(..., content_type="image/png, image/jpeg, image/jpg"),
         current_user: UserModel = Depends(get_current_user),
         db: AsyncIOMotorClient = Depends(get_database)
-):
+) -> object:
     """
     Update current user avatar.
 
@@ -147,6 +158,16 @@ async def update_avatar(
 
     max_file_size = 1024 * 1024 * 5  # 5 MB
     allowed_extensions = ["jpg", "jpeg", "png"]
+
+    # Allow add image from bytes array.
+    if isinstance(file, bytes):
+        filename = await ImageService.upload_bytes_image(file, "avatars")
+
+        current_user.photo_url = filename
+        await ImageService.delete_image(current_user.photo_url, "avatars")
+        await UserService.update(current_user, db)
+
+        return {"photoURL": filename}
 
     error = None
     if file.filename.split(".")[-1] not in allowed_extensions:
@@ -168,9 +189,11 @@ async def update_avatar(
     if error:
         raise APIRequestValidationException.from_details([error])
 
+    await ImageService.delete_image(current_user.photo_url, "avatars")
     await UserService.update_avatar(file, current_user, db)
 
-    return await UserService.build_user_response(current_user, db)
+    # return await UserService.build_user_response(current_user, db)
+    return {"photoURL": current_user.photo_url}
 
 
 @router.post(
@@ -211,6 +234,7 @@ async def block_or_unblock_user(
         user_id=body.blacklisted_user_id
     )
 
+
 @router.delete(
     path="/me",
     responses=DELETE_ME_RESPONSES
@@ -226,23 +250,28 @@ async def delete_me(
 
     **Note**: This endpoint is protected by OAuth2 scheme. It requires a valid access token to be sent in the **Authorization** header or cookie.
     """
+
     token = token.replace("Bearer ", "")
     await UserSessionService.delete(current_user, token, db)
 
-    response.delete_cookie(key="Authorization")
+    dialogs = await DialogService.get_by_user_id(current_user.id, db)
 
+    await DialogService.delete_all_dialogs(current_user.id, db)
+    await DialogMessageService.delete_all_messages(current_user.id, db)
     await UserService.delete(current_user, db)
 
-    return None
+    response.delete_cookie(key="Authorization")
 
-# @router.delete(
-#     path="/me/blacklist/{blacklisted_user_id}"
-# )
-# async def unblock_user(
-#         blacklisted_user_id: str,
-#         current_user: UserModel = Depends(get_current_user),
-#         db: AsyncIOMotorClient = Depends(get_database)
-# ) -> Union[list[BlacklistedUserInResponseModel], list]:
-#     await BlacklistService.unblock_user(blacklisted_user_id, current_user, db)
-#
-#     return [await BlacklistService.build_blacklisted_user(blacklist_model, db) for blacklist_model in current_user.blacklist]
+    dialog_data = []
+    for dialog in dialogs:
+        dialog_data.append({"dialogId": dialog.id})
+
+    socket_service.emit_to_user(SocketSendTypesEnum.DELETE_DIALOG, current_user.id, jsonable_encoder(dialog_data))
+    connections = socket_service.find_connections_by_user_id(current_user.id)
+    if not connections:
+        return None
+
+    for connection in connections:
+        socket_service.disconnect(connection.websocket)
+
+    return None

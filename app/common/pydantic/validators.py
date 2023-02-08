@@ -14,7 +14,7 @@ def email_validator(email: EmailStr) -> EmailStr:
     try:
         validate_email(email)
     except EmailNotValidError as e:
-        raise EmailIsNotValidType(translation_key="emailHasIncorrectDomain")
+        raise EmailIsNotValidType(translation_key="emailIsNotValid")
 
     return email
 

@@ -38,6 +38,7 @@ def create_fake_user(db: AsyncIOMotorClient) -> UserModel:
         photo_url="https://avatars.githubusercontent.com/u/45159366?v=4",
         blacklist=[],
         password="9328490289304829385902385902838435345234",
+        is_test=True
     )
 
     db[USERS_COLLECTION].insert_one(UserModel.mongo(user))

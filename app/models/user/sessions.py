@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 from pydantic import Field
 
@@ -36,4 +37,5 @@ class UserSessionInResponseModel(MongoModel):
     label: str = Field(...)
     type: UserSessionTypesEnum = Field(...)
     location: str = Field(...)
+    current: Optional[bool] = Field()
     created_at: datetime = Field(..., alias="createdAt")

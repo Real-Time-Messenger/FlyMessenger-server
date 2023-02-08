@@ -37,6 +37,8 @@ class UserModel(MongoModel):
     sessions: list[UserSessionModel] = Field(default_factory=list)
     blacklist: list[BlacklistedUserModel] = Field(default_factory=list)
 
+    is_test: bool = Field(default=False, alias="isTest")
+
     @validator("password", pre=True)
     def hash_password(cls, pw: str) -> str:
         """ Hash password before save to database (if password is not hashed yet). """
@@ -51,7 +53,7 @@ class UserInSignUpModel(MongoModel):
     """ Model for sign up user. """
 
     username: constr(to_lower=True) = Field(...)
-    email: EmailStr = Field(...)
+    email: str = Field(...)
     password: str = Field(...)
     password_confirm: str = Field(..., alias="passwordConfirm")
 

@@ -14,7 +14,10 @@ class UserOnlineStatusService:
         """ Toggle online status. """
 
         user = await UserService.get_by_id(user_id, db)
-        if not user.settings.last_activity_mode: return user
+        if not user.settings.last_activity_mode:
+            user.is_online = None
+            await UserService.update(user, db)
+            return user
 
         user.is_online = status
         if not status:

@@ -197,6 +197,7 @@ class UserService:
                     {"lastName": {"$regex": query, "$options": "i"}},
                     {"username": {"$regex": query, "$options": "i"}},
                     {"email": {"$regex": query, "$options": "i"}},
+                    {"isTest": False}
                 ],
                 "_id": {"$ne": current_user.id},
             }

@@ -1,6 +1,5 @@
 import bcrypt
 
-
 class HashService:
     """
     Hash service.

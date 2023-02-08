@@ -6,10 +6,12 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel
 from starlette.websockets import WebSocket
 
+from app.database.main import get_database
 from app.models.common.exceptions.body import InvalidObjectId
 from app.models.common.object_id import PyObjectId
 from app.services.token.token import TokenService
 from app.services.user.blacklist import BlacklistService
+from app.services.user.online_status import UserOnlineStatusService
 from app.services.user.user import UserService
 
 
@@ -34,6 +36,7 @@ class SocketSendTypesEnum(str, Enum):
     UNTYPING = "UNTYPING"
     USER_BLOCKED = "USER_BLOCKED"
     USER_LOGOUT = "USER_LOGOUT"
+    DELETE_DIALOG = "DELETE_DIALOG"
 
 
 class ConnectionModel(BaseModel):
@@ -61,7 +64,7 @@ class SocketBase:
         """
 
         await websocket.accept()
-        await websocket.send_json({"ping": "pong"})
+        # await websocket.send_json({"ping": "pong"})
 
         token = TokenService.decode(authorization)
         if token is None:
@@ -76,7 +79,9 @@ class SocketBase:
         except InvalidObjectId:
             return False
 
-        self.connections.append(ConnectionModel(token=authorization, websocket=websocket, user_id=user_id))
+        connection = self.find_connection(user_id)
+        if connection is None:
+            self.connections.append(ConnectionModel(token=authorization, websocket=websocket, user_id=user_id))
 
     async def disconnect(self, websocket: WebSocket) -> None:
         """
@@ -86,10 +91,13 @@ class SocketBase:
         :return: None
         """
 
+        db = get_database()
+
         for connection in self.connections:
             if connection.websocket == websocket:
                 self.connections.remove(connection)
                 try:
+                    await UserOnlineStatusService.toggle_online_status(connection.user_id, False, db)
                     await websocket.close()
                 except Exception:
                     pass
@@ -182,7 +190,6 @@ class SocketBase:
                 try:
                     await connection.websocket.send_json(jsonable_encoder(message))
                 except Exception:
-                    print(connection)
                     await self.disconnect(connection.websocket)
         elif websocket:
             try:
@@ -203,6 +210,7 @@ class SocketBase:
         connections = self.find_connections_by_user_id(user_id)
         for connection in connections:
             try:
+                pass
                 await connection.websocket.send_json(jsonable_encoder(message))
             except Exception:
                 await self.disconnect(connection.websocket)
@@ -224,10 +232,10 @@ class SocketBase:
         if not isinstance(user_ids, list):
             user_ids = [user_ids]
 
-        await self._send_personal_message_by_user_id(user_ids, {
+        await self._send_personal_message_by_user_id({
             "type": event_type,
             **message
-        })
+        }, *user_ids)
 
     async def check_if_user_can_send_message(
             self,

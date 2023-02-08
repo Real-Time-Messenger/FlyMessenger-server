@@ -173,7 +173,8 @@ class DialogMessageService:
                     {
                         "$ne": user_id
                     },
-                "isRead": False}
+                "isRead": False
+            }
         )
 
     @staticmethod
@@ -270,7 +271,8 @@ class DialogMessageService:
 
         result = []
 
-        messages = db[DIALOG_MESSAGES_COLLECTION].find({"dialogId": dialog_id}).sort("sentAt", -1).skip(skip).limit(limit)
+        messages = db[DIALOG_MESSAGES_COLLECTION].find({"dialogId": dialog_id}).sort("sentAt", -1).skip(skip).limit(
+            limit)
         for message in await messages.to_list(length=limit):
             message = DialogMessageModel.from_mongo(message)
 
@@ -286,3 +288,14 @@ class DialogMessageService:
             )
 
         return result
+
+    @staticmethod
+    async def delete_all_messages(user_id: PyObjectId, db: AsyncIOMotorClient) -> None:
+        """
+        Delete all messages.
+
+        :param current_user: Current user.
+        :param db: Database connection object.
+        """
+
+        await db[DIALOG_MESSAGES_COLLECTION].delete_many({"senderId": user_id})
