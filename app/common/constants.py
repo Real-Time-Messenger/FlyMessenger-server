@@ -16,4 +16,5 @@ cookie_options = {
     "httponly": True,
     "secure": True,
     "max_age": 60 * 60 * 24 * 7 * 4,
+    "samesite": "none"
 }

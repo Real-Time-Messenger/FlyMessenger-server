@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Union
 
 from fastapi import APIRouter, Depends, Request, Response, Path
+from fastapi.encoders import jsonable_encoder
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from app.common.constants import cookie_options
@@ -21,6 +22,8 @@ from app.services.auth.auth import AuthService
 from app.services.token.token import TokenService
 from app.services.user.sessions import UserSessionService
 from app.services.user.user import UserService
+from app.services.websocket.base import SocketSendTypesEnum
+from app.services.websocket.socket import socket_service
 
 router = APIRouter()
 
@@ -85,6 +88,17 @@ async def logout(
 
     token = token.replace("Bearer ", "")
     await UserSessionService.delete(current_user, token, db)
+
+    body = {
+        "userId": str(current_user.id),
+        "status": False,
+        "lastActivity": datetime.now()
+    }
+
+    await socket_service.emit_for_all(
+        SocketSendTypesEnum.TOGGLE_ONLINE_STATUS,
+        jsonable_encoder(body)
+    )
 
     response.delete_cookie(key="Authorization")
 

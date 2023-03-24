@@ -51,7 +51,6 @@ SETTINGS_EXAMPLE = UserSettingsModel(
     chats_sound_enabled=True,
     conversations_sound_enabled=True,
     groups_sound_enabled=True,
-    allow_run_on_startup=True,
     last_activity_mode=True
 )
 

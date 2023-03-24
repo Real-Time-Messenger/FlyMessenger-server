@@ -12,6 +12,7 @@ from app.database.main import get_database
 from app.exception.body import APIRequestValidationException
 from app.models.common.exceptions.body import RequestValidationDetails
 from app.models.common.responses.blacklist import BlockOrUnblockUserResponseModel
+from app.models.dialog.dialog import DialogModel
 from app.models.socket.utils import SendBlockedMessageToClient
 from app.models.user.blacklist import BlacklistInCreateModel, BlacklistedUserInResponseModel
 from app.models.user.sessions import UserSessionInResponseModel, UserSessionTypesEnum
@@ -256,22 +257,22 @@ async def delete_me(
 
     dialogs = await DialogService.get_by_user_id(current_user.id, db)
 
-    await DialogService.delete_all_dialogs(current_user.id, db)
-    await DialogMessageService.delete_all_messages(current_user.id, db)
-    await UserService.delete(current_user, db)
-
     response.delete_cookie(key="Authorization")
 
-    dialog_data = []
     for dialog in dialogs:
-        dialog_data.append({"dialogId": dialog.id})
+        recipient = dialog.from_user if dialog.from_user.id != current_user.id else dialog.to_user
+        socket_service.emit_to_user(SocketSendTypesEnum.DELETE_DIALOG, recipient.id, {"dialogId": dialog.id})
 
-    socket_service.emit_to_user(SocketSendTypesEnum.DELETE_DIALOG, current_user.id, jsonable_encoder(dialog_data))
+    socket_service.emit_to_user(SocketSendTypesEnum.DELETE_USER, current_user.id, {})
+
     connections = socket_service.find_connections_by_user_id(current_user.id)
     if not connections:
         return None
 
     for connection in connections:
         socket_service.disconnect(connection.websocket)
+
+    await DialogService.delete_all_dialogs(current_user.id, db)
+    await DialogMessageService.delete_all_messages(current_user.id, db)
 
     return None

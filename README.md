@@ -72,7 +72,7 @@ pip install -r requirements.txt
 To start the API, run the following command:
 
 ```bash
-uvicorn main:app --reload
+uvicorn app.main:app --reload 
 ```
 
 The API will now be running at `http://localhost:8000`. You can use a tool like Postman to send requests to the API.

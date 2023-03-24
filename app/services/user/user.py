@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -5,7 +6,7 @@ from fastapi import UploadFile
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.errors import DuplicateKeyError
 
-from app.common.constants import USERS_COLLECTION, FRONTEND_URL
+from app.common.constants import USERS_COLLECTION
 from app.common.frontend.pages import ACTIVATION_PAGE
 from app.exception.api import APIException
 from app.models.common.object_id import PyObjectId
@@ -71,7 +72,8 @@ class UserService:
         if not user.is_active:
             token_expiration = TokenService.get_token_expiration(user.activation_token) or None
             if token_expiration is None or token_expiration.timestamp() < datetime.now(tz=None).timestamp():
-                user.activation_token = TokenService.generate_custom_token(timedelta(hours=1), type="activation", id=user.id)
+                user.activation_token = TokenService.generate_custom_token(timedelta(hours=1), type="activation",
+                                                                           id=user.id)
 
                 await EmailService.send_email(
                     user.email,
@@ -190,22 +192,32 @@ class UserService:
         :return: List of users.
         """
 
+        # query = re.sub(r"[^a-zA-Z0-9 \n.]", "", query)
+        # query = re.sub(r"[^\w\s.]", "", query)
+        query = re.sub(r"[^\w\s.]", "", query)
+
         users = await db[USERS_COLLECTION].find(
             {
-                "$or": [
-                    {"firstName": {"$regex": query, "$options": "i"}},
-                    {"lastName": {"$regex": query, "$options": "i"}},
-                    {"username": {"$regex": query, "$options": "i"}},
-                    {"email": {"$regex": query, "$options": "i"}},
-                    {"isTest": False}
-                ],
-                "_id": {"$ne": current_user.id},
+                "$and": [
+                    {
+                        "$or": [
+                            {"firstName": {"$regex": query, "$options": "i"}},
+                            {"lastName": {"$regex": query, "$options": "i"}},
+                            {"username": {"$regex": query, "$options": "i"}},
+                            {"email": {"$regex": query, "$options": "i"}}
+                        ]
+                    },
+                    {
+                        "isTest": False,
+                        "_id": {"$ne": current_user.id},
+                    }
+                ]
             }
         ).to_list(length=100)
         if not users:
             return []
 
-        return [UserInSearchModel(**UserModel.from_mongo(user).dict()) for user in users]
+        return [UserInSearchModel.from_mongo(user) for user in users]
 
     @staticmethod
     async def get_by_username(username: str, db: AsyncIOMotorClient) -> Optional[UserModel]:

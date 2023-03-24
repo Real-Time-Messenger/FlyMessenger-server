@@ -1,7 +1,8 @@
+import re
 from datetime import datetime
 
 from bson import ObjectId
-from pydantic import BaseModel, BaseConfig
+from pydantic import BaseModel, BaseConfig, StrictBytes, StrictStr
 
 
 class MongoModel(BaseModel):

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, Path, Query
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from app.common.swagger.responses.search import SEARCH_BY_DIALOG_RESPONSES, SEARCH_RESPONSES
@@ -12,11 +12,11 @@ from app.services.search.search import SearchService
 router = APIRouter()
 
 @router.get(
-    path="/{dialogId}/{query}",
+    path="/{dialogId}",
     responses=SEARCH_BY_DIALOG_RESPONSES
 )
 async def search_by_dialog(
-        query: str = Path(...),
+        query: str = Query(...),
         dialog_id: PyObjectId = Path(..., alias='dialogId'),
         current_user: UserModel = Depends(get_current_user),
         db: AsyncIOMotorClient = Depends(get_database)
@@ -34,11 +34,12 @@ async def search_by_dialog(
 
 
 @router.get(
-    path="/{query}",
-    responses=SEARCH_RESPONSES
+    path="",
+    responses=SEARCH_RESPONSES,
+    response_model=SearchResultModel
 )
 async def search(
-        query: str = Path(...),
+        query: str = Query(...),
         current_user: UserModel = Depends(get_current_user),
         db: AsyncIOMotorClient = Depends(get_database)
 ) -> SearchResultModel:
@@ -49,4 +50,5 @@ async def search(
 
     **Note:** This endpoint is protected by OAuth2 scheme. It requires a valid access token to be sent in the **Authorization** header or cookie.
     """
+
     return await SearchService.search(query, current_user, db)

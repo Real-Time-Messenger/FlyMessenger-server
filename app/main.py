@@ -34,6 +34,13 @@ app.add_middleware(
 app.include_router(main_router, prefix="/api")
 
 
+@app.middleware("http")
+async def decode_response(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Accept-Encoding"] = "gzip, deflate, br"
+    return response
+
+
 @app.exception_handler(APIException)
 async def api_exception_handler(_: Request, exc: APIException):
     """ Exception handler for APIException. """

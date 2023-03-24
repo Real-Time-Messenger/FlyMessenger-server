@@ -37,6 +37,7 @@ class SocketSendTypesEnum(str, Enum):
     USER_BLOCKED = "USER_BLOCKED"
     USER_LOGOUT = "USER_LOGOUT"
     DELETE_DIALOG = "DELETE_DIALOG"
+    DELETE_USER = "DELETE_USER"
 
 
 class ConnectionModel(BaseModel):
@@ -79,8 +80,7 @@ class SocketBase:
         except InvalidObjectId:
             return False
 
-        connection = self.find_connection(user_id)
-        if connection is None:
+        if not self.find_connection_by_token(authorization):
             self.connections.append(ConnectionModel(token=authorization, websocket=websocket, user_id=user_id))
 
     async def disconnect(self, websocket: WebSocket) -> None:
@@ -162,7 +162,7 @@ class SocketBase:
         for websocket in websockets:
             await self._send_message(message, websocket=websocket)
 
-    async def _send_personal_message_by_user_id(self, message: dict, *user_ids: PyObjectId) -> None:
+    async def _send_personal_message_by_user_id(self, message: dict, *user_ids) -> None:
         """
         Send message to specific users (all connections with the same user ID).
 
@@ -236,6 +236,22 @@ class SocketBase:
             "type": event_type,
             **message
         }, *user_ids)
+
+    async def emit_for_all(
+            self,
+            event_type: SocketSendTypesEnum,
+            message: dict
+    ) -> None:
+        """
+        Send message to specific user.
+
+        :param event_type: Type of event message.
+        :param message: Message to send.
+        """
+        await self._send_global_message({
+            "type": event_type,
+            **message
+        })
 
     async def check_if_user_can_send_message(
             self,

@@ -71,11 +71,11 @@ class AuthService:
 
         user = await UserService.authenticate(body.username, body.password.get_secret_value(), db)
 
-        is_user_foreign = await UserSessionService.is_foreign_user(user, request)
-        if is_user_foreign:
-            await NewDeviceService.generate_secret(user, db)
-
-            return UserInEventResponseModel(event=AuthResponseType.NEW_DEVICE)
+        # is_user_foreign = await UserSessionService.is_foreign_user(user, request)
+        # if is_user_foreign:
+        #     await NewDeviceService.generate_secret(user, db)
+        #
+        #     return UserInEventResponseModel(event=AuthResponseType.NEW_DEVICE)
 
         if user.settings.two_factor_enabled:
             await TwoFactorService.generate_secret(user, db)

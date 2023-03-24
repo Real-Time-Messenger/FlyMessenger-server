@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import Union, Optional
 
-from pydantic import BaseModel, Field, EmailStr, validator, root_validator, SecretStr, constr
+from pydantic import BaseModel, Field, EmailStr, validator, root_validator, SecretStr, constr, conbytes, StrictBytes, \
+    StrictStr
 
 from app.common.pydantic.validators import username_validator, password_validator, passwords_match_validator, \
     email_validator, password_confirm_validator, first_name_validator, last_name_validator
@@ -93,11 +94,11 @@ class UserInResponseModel(MongoModel):
 
     id: PyObjectId = Field(...)
     username: str = Field(...)
-    email: Optional[EmailStr] = Field(None)
-    first_name: Optional[str] = Field(None, alias="firstName")
-    last_name: Optional[str] = Field(None, alias="lastName")
+    email: EmailStr = Field(None)
+    first_name: StrictStr = Field(..., alias="firstName", regex=r"\A")
+    last_name: Optional[StrictStr] = Field(None, alias="lastName")
     is_active: bool = Field(..., alias="isActive")
-    photo_url: Optional[str] = Field(alias="photoURL")
+    photo_url: str = Field(alias="photoURL")
     is_online: Optional[bool] = Field(default=True, alias="isOnline")
     last_activity: Optional[datetime] = Field(default=None, alias="lastActivity")
     created_at: datetime = Field(..., alias="createdAt")

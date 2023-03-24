@@ -34,20 +34,20 @@ description = """
 
 # Override the default FastAPI OpenAPI(swagger) schema.
 swagger_obj = {
-    "title": "Fly Messegner API",
+    "title": "Fly Messenger API",
     "description": description,
-    "version": "0.1.0",
+    "version": "0.9.0",
     "license": {
         "name": "MIT",
     },
     "info": {
         "x-logo": {
-            "url": "http://locahost:8001/public/logo.png",
+            "url": "http://locahost:8000/public/logo.png",
         }
     },
     "servers": [
         {
-            "url": "http://localhost:8001",
+            "url": "http://localhost:8000",
             "description": "Local server",
         }
     ],

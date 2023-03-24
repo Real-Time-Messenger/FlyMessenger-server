@@ -40,7 +40,7 @@ class UserInDialogResponseModel(MongoModel):
     last_name: Optional[str] = Field(default=None, alias="lastName")
     photo_url: Optional[str] = Field(alias="photoURL")
     is_blocked: bool = Field(default=False, alias="isBlocked")
-    is_online: bool = Field(default=False, alias="isOnline")
+    is_online: Optional[bool] = Field(default=False, alias="isOnline")
     last_activity: Optional[datetime] = Field(default=None, alias="lastActivity")
 
 

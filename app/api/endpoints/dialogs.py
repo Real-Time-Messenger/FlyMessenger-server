@@ -13,6 +13,8 @@ from app.models.dialog.messages import DialogMessageInResponseModel
 from app.models.user.user import UserModel
 from app.services.dialog.dialog import DialogService
 from app.services.dialog.message import DialogMessageService
+from app.services.websocket.base import SocketSendTypesEnum
+from app.services.websocket.socket import socket_service
 
 router = APIRouter()
 
@@ -123,5 +125,10 @@ async def delete_dialog(
 
     **Note:** This endpoint is protected by OAuth2 scheme. It requires a valid access token to be sent in the **Authorization** header or cookie.
     """
+
+    dialog = await DialogService.get_by_id(dialog_id, db)
+
+    recipient = dialog.from_user if dialog.from_user.id != current_user.id else dialog.to_user
+    await socket_service.emit_to_user(SocketSendTypesEnum.DELETE_DIALOG, recipient.id, {"dialogId": str(dialog_id)})
 
     await DialogService.delete(PyObjectId(dialog_id), current_user, db)

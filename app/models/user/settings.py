@@ -29,17 +29,15 @@ class UserSettingsModel(MongoModel):
 
     language: LanguagesEnum = Field(default=LanguagesEnum.ENGLISH)
 
-    chats_notifications_enabled: bool = Field(default=False, alias="chatsNotificationsEnabled")
-    conversations_notifications_enabled: bool = Field(default=False, alias="conversationsNotificationsEnabled")
-    groups_notifications_enabled: bool = Field(default=False, alias="groupsNotificationsEnabled")
+    chats_notifications_enabled: bool = Field(default=True, alias="chatsNotificationsEnabled")
+    conversations_notifications_enabled: bool = Field(default=True, alias="conversationsNotificationsEnabled")
+    groups_notifications_enabled: bool = Field(default=True, alias="groupsNotificationsEnabled")
 
-    chats_sound_enabled: bool = Field(default=False, alias="chatsSoundEnabled")
-    conversations_sound_enabled: bool = Field(default=False, alias="conversationsSoundEnabled")
-    groups_sound_enabled: bool = Field(default=False, alias="groupsSoundEnabled")
+    chats_sound_enabled: bool = Field(default=True, alias="chatsSoundEnabled")
+    conversations_sound_enabled: bool = Field(default=True, alias="conversationsSoundEnabled")
+    groups_sound_enabled: bool = Field(default=True, alias="groupsSoundEnabled")
 
     last_activity_mode: bool = Field(default=True, alias="lastActivityMode")
-
-    allow_run_on_startup: bool = Field(default=True, alias="allowRunOnStartup")
 
 class UserSettingsUpdateModel(MongoModel):
     """ Model for updating user settings. """
@@ -58,4 +56,4 @@ class UserSettingsUpdateModel(MongoModel):
     conversations_sound_enabled: Optional[bool] = Field(None, alias="conversationsSoundEnabled")
     groups_sound_enabled: Optional[bool] = Field(None, alias="groupsSoundEnabled")
 
-    last_activity_mode: bool = Field(default=True, alias="lastActivityMode")
+    last_activity_mode: Optional[bool] = Field(default=True, alias="lastActivityMode")

@@ -1,12 +1,12 @@
 from datetime import datetime
-from typing import Union, Optional
+from typing import Union, Optional, List
 
 from fastapi import Request
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from app.common.constants import USERS_COLLECTION
 from app.models.common.object_id import PyObjectId
-from app.models.user.sessions import UserSessionModel, UserSessionTypesEnum
+from app.models.user.sessions import UserSessionModel, UserSessionTypesEnum, UserSessionInResponseModel
 from app.models.user.user import UserModel
 from app.services.location.location import LocationService
 from app.services.token.token import TokenService
@@ -239,3 +239,29 @@ class UserSessionService:
         await UserService.update(user, db)
 
         return user_session
+
+    @staticmethod
+    async def build_sessions(user_id: PyObjectId, token: str, db: AsyncIOMotorClient) -> List[UserSessionModel]:
+        """
+        Build sessions.
+
+        :param user_id: User id.
+        :param token: Current user token.
+        :param db: Database connection object.
+
+        :return: List of user session objects.
+        """
+
+        # set the `current` field to True if the sessions token is the same as the user's current token
+        user = await UserService.get_by_id(user_id, db)
+
+        sessions = []
+        for user_session in user.sessions:
+            session = UserSessionInResponseModel.from_mongo(user_session.dict())
+
+            if user_session.token == token:
+                session.current = True
+
+            sessions.append(session)
+
+        return sessions

@@ -7,7 +7,6 @@ from starlette.websockets import WebSocket
 
 from app.models.common.object_id import PyObjectId
 from app.models.dialog.messages import DialogMessageInCreateModel
-from app.models.user.user import UserInResponseModel
 from app.services.dialog.dialog import DialogService
 from app.services.dialog.message import DialogMessageService
 from app.services.image.image import ImageService
@@ -95,12 +94,12 @@ class SocketService(SocketBase):
             user = await UserService.get_by_id(user_id, db)
             user.sessions.remove(session)
 
-            built_user = await UserService.build_user_response(user, db)
-
             connection = self.find_connection_by_token(session.token)
             if not connection:
                 await UserSessionService.delete(user, session.token, db)
                 return
+
+            await UserService.update(user, db)
 
             # Send message to user about destroying session.
             await connection.websocket.send_json({
@@ -109,14 +108,14 @@ class SocketService(SocketBase):
                 "sessionId": str(session.token),
             })
 
+            sessions = await UserSessionService.build_sessions(user_id, token, db)
+
             # Send message to websocket user about successful destroying session.
-            await websocket.send_json({
+            await self._send_personal_message_by_user_id({
                 "type": SocketSendTypesEnum.USER_LOGOUT,
                 "success": True,
-                "user": jsonable_encoder(UserInResponseModel(**built_user.dict()))
-            })
-
-            await UserService.update(user, db)
+                "sessions": sessions
+            }, user_id)
 
     async def _get_recipient_id(
             self,
@@ -177,14 +176,24 @@ class SocketService(SocketBase):
         new_message = await DialogMessageService.create(new_message_payload, db)
 
         current_user = await UserService.get_by_id(user_id, db)
+        recipient = await UserService.get_by_id(recipient_id, db)
 
         dialog = await DialogService.get_by_id(dialog_id, db)
         dialog = await DialogService.build_dialog(dialog, current_user, db)
         dialog.messages = []
 
+        recipient_dialog = await DialogService.get_by_id(dialog_id, db)
+        recipient_dialog = await DialogService.build_dialog(recipient_dialog, recipient, db)
+        recipient_dialog.messages = []
+
         dialog_data = {
             "isNotificationsEnabled": dialog.is_notifications_enabled,
-            "isSoundEnabled": dialog.is_sound_enabled,
+            "isSoundEnabled": dialog.is_sound_enabled
+        }
+
+        recipient_dialog_data = {
+            "isNotificationsEnabled": recipient_dialog.is_notifications_enabled,
+            "isSoundEnabled": recipient_dialog.is_sound_enabled
         }
 
         await self._send_personal_message_by_user_id({
@@ -193,7 +202,15 @@ class SocketService(SocketBase):
             "dialog": dialog,
             "dialogData": dialog_data,
             "userId": str(user_id),
-        }, user_id, recipient_id)
+        }, user_id)
+
+        await self._send_personal_message_by_user_id({
+            "type": SocketSendTypesEnum.RECEIVE_MESSAGE,
+            "message": await DialogMessageService.build_message(new_message, db),
+            "dialog": recipient_dialog,
+            "dialogData": recipient_dialog_data,
+            "userId": str(user_id),
+        }, recipient_id)
 
     async def _handle_read_message(
             self,

@@ -37,5 +37,5 @@ class UserSessionInResponseModel(MongoModel):
     label: str = Field(...)
     type: UserSessionTypesEnum = Field(...)
     location: str = Field(...)
-    current: Optional[bool] = Field()
+    current: Optional[bool] = Field(False)
     created_at: datetime = Field(..., alias="createdAt")
