@@ -58,9 +58,9 @@ class SocketService(SocketBase):
             await self._handle_send_message(user_id, dialog_id, text, file, db)
 
         elif user_type == SocketReceiveTypesEnum.READ_MESSAGE:
-            message_id = json_data.get("messageId")
+            message_id = PyObjectId(json_data.get("messageId"))
 
-            await self._handle_read_message(PyObjectId(message_id), user_id, dialog_id, db)
+            await self._handle_read_message(message_id, user_id, dialog_id, db)
 
         elif user_type == SocketReceiveTypesEnum.TOGGLE_ONLINE_STATUS:
             status = json_data.get("status")
@@ -164,7 +164,9 @@ class SocketService(SocketBase):
         if not is_user_can_send_message:
             return
 
-        filename = await ImageService.upload_base64_image(file, "uploads") if file else None
+        filename = None
+        if file:
+            filename = await ImageService.upload_base64_image(file, "uploads")
 
         new_message_payload = DialogMessageInCreateModel(
             sender_id=user_id,
@@ -229,6 +231,8 @@ class SocketService(SocketBase):
         """
 
         message = await DialogMessageService.read_message(message_id, dialog_id, db)
+        if not message:
+            return
 
         recipient_id = await self._get_recipient_id(user_id, dialog_id, db)
 

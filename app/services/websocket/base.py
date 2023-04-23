@@ -65,7 +65,7 @@ class SocketBase:
         """
 
         await websocket.accept()
-        # await websocket.send_json({"ping": "pong"})
+        await websocket.send_json({"ping": "pong"})
 
         token = TokenService.decode(authorization)
         if token is None:
@@ -175,7 +175,7 @@ class SocketBase:
 
     async def _send_message(self, message: dict, **kwargs) -> None:
         """
-        Send message to specific user.
+        Send message to specific user (abstract method).
 
         :param message: Message to send.
         :param kwargs: Keyword arguments.

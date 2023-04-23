@@ -1,7 +1,7 @@
+import re
 from datetime import timedelta, datetime
 from typing import Union
 
-from email_validator import validate_email
 from fastapi import Request, Response
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -71,11 +71,11 @@ class AuthService:
 
         user = await UserService.authenticate(body.username, body.password.get_secret_value(), db)
 
-        # is_user_foreign = await UserSessionService.is_foreign_user(user, request)
-        # if is_user_foreign:
-        #     await NewDeviceService.generate_secret(user, db)
-        #
-        #     return UserInEventResponseModel(event=AuthResponseType.NEW_DEVICE)
+        is_user_foreign = await UserSessionService.is_foreign_user(user, request)
+        if is_user_foreign:
+            await NewDeviceService.generate_secret(user, db)
+
+            return UserInEventResponseModel(event=AuthResponseType.NEW_DEVICE)
 
         if user.settings.two_factor_enabled:
             await TwoFactorService.generate_secret(user, db)
@@ -141,7 +141,7 @@ class AuthService:
             subject="Activate your account",
             template="activation",
             username=user.username,
-            url=f"{ACTIVATION_PAGE}/{user.activation_token}",
+            url=f"{ACTIVATION_PAGE}?token={user.activation_token}",
         )
 
         return UserInEventResponseModel(event=AuthResponseType.ACTIVATION_REQUIRED)

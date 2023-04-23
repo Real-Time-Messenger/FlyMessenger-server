@@ -2,7 +2,7 @@ from email_validator import EmailNotValidError, validate_email
 from pydantic import EmailStr
 
 from app.models.common.exceptions.body import NotCorrectLength, EmailIsNotValidType, PasswordsDoNotMatch, \
-    NotCorrectToken, NotCorrectLengthWithoutMinLength
+    NotCorrectToken, NotCorrectLengthWithoutMinLength, InvalidCharacters
 
 
 def email_validator(email: EmailStr) -> EmailStr:
@@ -24,6 +24,9 @@ def username_validator(cls, username: str) -> str:
 
     if not len(username) >= 3 and len(username) <= 50:
         raise NotCorrectLength(min_length=3, max_length=50, translation_key="usernameHasIncorrectLength")
+
+    if not username.isalnum() and not username.replace(".", "").isalnum() and not username.replace("_", "").isalnum():
+        raise InvalidCharacters(translation_key="usernameHasInvalidCharacters")
 
     return username
 

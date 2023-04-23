@@ -29,6 +29,3 @@ archive.zip
 public/avatars/*
 !public/avatars/default.png
 public/uploads/*
-
-.space
-.vercel

@@ -135,7 +135,6 @@ async def update_me(
 
     await UserService.update(current_user, db)
 
-    # return await UserService.build_user_response(current_user, db)
     return body.dict(exclude_unset=True, by_alias=True)
 
 
@@ -160,7 +159,7 @@ async def update_avatar(
     max_file_size = 1024 * 1024 * 5  # 5 MB
     allowed_extensions = ["jpg", "jpeg", "png"]
 
-    # Allow add image from bytes array.
+    # Allow to add image from bytes array.
     if isinstance(file, bytes):
         filename = await ImageService.upload_bytes_image(file, "avatars")
 
@@ -193,7 +192,6 @@ async def update_avatar(
     await ImageService.delete_image(current_user.photo_url, "avatars")
     await UserService.update_avatar(file, current_user, db)
 
-    # return await UserService.build_user_response(current_user, db)
     return {"photoURL": current_user.photo_url}
 
 
@@ -274,5 +272,7 @@ async def delete_me(
 
     await DialogService.delete_all_dialogs(current_user.id, db)
     await DialogMessageService.delete_all_messages(current_user.id, db)
+
+    await UserService.delete(current_user, db)
 
     return None

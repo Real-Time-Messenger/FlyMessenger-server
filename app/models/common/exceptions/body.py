@@ -41,6 +41,12 @@ class NotCorrectLength(PydanticValueError):
     msg_template = 'Field should be at least {min_length} and at most {max_length} characters long'
 
 
+class InvalidCharacters(PydanticValueError):
+    """ `Invalid characters` custom exception. """
+
+    code = 'invalid_characters'
+    msg_template = 'Field should contain only letters, numbers, and underscores'
+
 class NotCorrectLengthWithoutMinLength(PydanticValueError):
     """ `Not correct length without min length` custom exception. """
 

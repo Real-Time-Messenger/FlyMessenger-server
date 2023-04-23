@@ -102,7 +102,8 @@ class UserService:
         """
 
         try:
-            user = UserModel(first_name=body.username, photo_url="https://i.imgur.com/1Q1Z1Zm.png", **body.dict())
+            image = await ImageService.generate_mock_image(body.username)
+            user = UserModel(first_name=body.username, photo_url=image, **body.dict())
 
             new_user = await db[USERS_COLLECTION].insert_one(user.mongo())
 
@@ -192,8 +193,6 @@ class UserService:
         :return: List of users.
         """
 
-        # query = re.sub(r"[^a-zA-Z0-9 \n.]", "", query)
-        # query = re.sub(r"[^\w\s.]", "", query)
         query = re.sub(r"[^\w\s.]", "", query)
 
         users = await db[USERS_COLLECTION].find(
