@@ -6,6 +6,7 @@ from app.common.swagger.responses.dialogs import CREATE_DIALOG_RESPONSES, GET_MY
 from app.common.swagger.responses.dialogs.messages.get_dialog_messages import GET_DIALOG_MESSAGES_RESPONSES
 from app.core.ouath.main import get_current_user
 from app.database.main import get_database
+from app.exception.api import APIException
 from app.models.common.object_id import PyObjectId
 from app.models.common.search.skip_and_limit import SkipAndLimitModel
 from app.models.dialog.dialog import DialogInCreateModel, DialogInResponseModel, DialogInUpdateModel
@@ -127,6 +128,8 @@ async def delete_dialog(
     """
 
     dialog = await DialogService.get_by_id(dialog_id, db)
+    if dialog is None:
+        raise APIException.not_found("Dialog not found")
 
     recipient = dialog.from_user if dialog.from_user.id != current_user.id else dialog.to_user
     await socket_service.emit_to_user(SocketSendTypesEnum.DELETE_DIALOG, recipient.id, {"dialogId": str(dialog_id)})

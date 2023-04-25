@@ -25,8 +25,8 @@ class UserModel(MongoModel):
     last_name: Optional[str] = Field(default=None, max_length=25, alias="lastName")
     is_active: bool = Field(default=False, alias="isActive")
     photo_url: Optional[str] = Field(alias="photoURL")
-    is_online: Optional[bool] = Field(default=True, alias="isOnline")
-    last_activity: Optional[datetime] = Field(default=None, alias="lastActivity")
+    is_online: Optional[bool] = Field(default=False, alias="isOnline")
+    last_activity: Optional[datetime] = Field(default=datetime.now(tz=None), alias="lastActivity")
     created_at: datetime = Field(default=datetime.utcnow(), alias="createdAt")
 
     reset_password_token: Optional[str] = Field(default=None, alias="resetPasswordToken")

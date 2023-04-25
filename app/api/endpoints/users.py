@@ -268,7 +268,7 @@ async def delete_me(
         return None
 
     for connection in connections:
-        socket_service.disconnect(connection.websocket)
+       await socket_service.disconnect(connection.websocket)
 
     await DialogService.delete_all_dialogs(current_user.id, db)
     await DialogMessageService.delete_all_messages(current_user.id, db)

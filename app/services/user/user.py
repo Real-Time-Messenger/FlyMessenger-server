@@ -209,6 +209,7 @@ class UserService:
                     {
                         "isTest": False,
                         "_id": {"$ne": current_user.id},
+                        "isActive": True,
                     }
                 ]
             }

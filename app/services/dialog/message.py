@@ -194,8 +194,6 @@ class DialogMessageService:
         :return: Dialog message object.
         """
 
-        # remove special characters
-        # query = re.sub(r"[^a-zA-Z0-9 \n.]", "", query)
         query = re.sub(r"[^\w\s.]", "", query)
 
         messages = db[DIALOG_MESSAGES_COLLECTION].find(
