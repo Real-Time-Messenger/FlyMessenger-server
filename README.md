@@ -67,6 +67,22 @@ pip install -r requirements.txt
 5. Open the `.env.sample` file and fill in the required fields
 6. Rename the `.env.sample` file to `.env`
 
+### Changing the default port
+
+By default, the API will run on port `8000`. To change the port, open the `main.py` file in the root directory and change the `port` parameter in the `uvicorn.run` function:
+
+```python
+import uvicorn
+
+if __name__ == "__main__":
+    uvicorn.run(
+        "app.main:app",
+        host="localhost",
+        port=8000, # Change this to the desired port.
+        reload=True, # Set this to `False` in production.
+    )
+  ```
+
 ### Running the API
 
 To start the API, run the following command:
