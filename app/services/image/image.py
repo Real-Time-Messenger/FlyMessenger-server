@@ -5,7 +5,7 @@ from uuid import uuid4
 from PIL import Image, ImageDraw, ImageFont
 from fastapi import UploadFile
 
-from app.common.constants import PUBLIC_FOLDER
+from app.common.constants import PUBLIC_FOLDER, SELF_URL
 
 
 class ImageService:
@@ -14,6 +14,22 @@ class ImageService:
 
     This class is responsible for performing tasks when image is created, updated, deleted, etc.
     """
+
+    @staticmethod
+    def _url(
+            filename: str,
+            folder: str = "uploads"
+    ) -> str:
+        """
+        Generate image URL.
+
+        :param filename: Image filename.
+        :param folder: Folder name.
+
+        :return: Image URL.
+        """
+
+        return f"{SELF_URL}/{PUBLIC_FOLDER}/{folder}/{filename}"
 
     @staticmethod
     async def upload_base64_image(
@@ -34,7 +50,7 @@ class ImageService:
         with open(f"{PUBLIC_FOLDER}/{folder}/{image_name}", "wb") as f:
             f.write(image_data)
 
-        return image_name
+        return ImageService._url(image_name, folder)
 
     @staticmethod
     async def upload_image(
@@ -56,7 +72,7 @@ class ImageService:
         with open(f'{PUBLIC_FOLDER}/{folder}/{image_name}', 'wb') as f:
             f.write(content)
 
-        return image_name
+        return ImageService._url(image_name, folder)
 
     @staticmethod
     async def upload_bytes_image(file: bytes, folder: str = 'uploads') -> str:
@@ -72,7 +88,7 @@ class ImageService:
         with open(f'{PUBLIC_FOLDER}/{folder}/{image_name}', 'wb', encoding="utf-8") as f:
             f.write(file)
 
-        return image_name
+        return ImageService._url(image_name, folder)
 
     @staticmethod
     async def delete_image(url: str, folder: str = 'uploads') -> None:
@@ -132,7 +148,7 @@ class ImageService:
         image_name = f'{uuid4()}.png'
         image.save(f'{PUBLIC_FOLDER}/avatars/{image_name}')
 
-        return image_name
+        return ImageService._url(image_name, 'avatars')
 
     @staticmethod
     def generate_random_color() -> tuple:

@@ -166,27 +166,27 @@ async def update_avatar(
         await ImageService.delete_image(current_user.photo_url, "avatars")
         await UserService.update(current_user, db)
 
-        return {"photoURL": f"{filename}"}
+        return {"photoURL": f"{current_user.photo_url}"}
 
-    error = None
+    error = []
     if file.filename.split(".")[-1] not in allowed_extensions:
-        error = RequestValidationDetails(
+        error.append(RequestValidationDetails(
             location="file",
             message="Invalid file type.",
             translation="invalidFileType",
             field="file"
-        )
+        ))
 
     if len(await file.read()) > max_file_size:
-        error = RequestValidationDetails(
+        error.append(RequestValidationDetails(
             location="file",
             message="File is too large.",
             translation="fileIsTooLarge",
             field="file"
-        )
+        ))
 
     if error:
-        raise APIRequestValidationException.from_details([error])
+        raise APIRequestValidationException.from_details(error)
 
     await ImageService.delete_image(current_user.photo_url, "avatars")
     await UserService.update_avatar(file, current_user, db)
