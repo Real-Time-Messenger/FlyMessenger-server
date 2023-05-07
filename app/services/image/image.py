@@ -1,13 +1,11 @@
 import base64
-import colorsys
 import random
 from uuid import uuid4
 
 from PIL import Image, ImageDraw, ImageFont
 from fastapi import UploadFile
 
-from app.common.constants import PUBLIC_FOLDER, SELF_URL
-from app.models.user.user import UserModel
+from app.common.constants import PUBLIC_FOLDER
 
 
 class ImageService:
@@ -16,17 +14,6 @@ class ImageService:
 
     This class is responsible for performing tasks when image is created, updated, deleted, etc.
     """
-
-    @staticmethod
-    def _url(url: str, folder: str = "uploads") -> str:
-        """
-        Build image URL.
-
-        :param url: Image URL.
-
-        :return: Image URL.
-        """
-        return f"{SELF_URL}/{PUBLIC_FOLDER}/{folder}/{url}"
 
     @staticmethod
     async def upload_base64_image(
@@ -47,7 +34,7 @@ class ImageService:
         with open(f"{PUBLIC_FOLDER}/{folder}/{image_name}", "wb") as f:
             f.write(image_data)
 
-        return ImageService._url(image_name, folder)
+        return image_name
 
     @staticmethod
     async def upload_image(
@@ -69,7 +56,7 @@ class ImageService:
         with open(f'{PUBLIC_FOLDER}/{folder}/{image_name}', 'wb') as f:
             f.write(content)
 
-        return ImageService._url(image_name, folder)
+        return image_name
 
     @staticmethod
     async def upload_bytes_image(file: bytes, folder: str = 'uploads') -> str:
@@ -85,7 +72,7 @@ class ImageService:
         with open(f'{PUBLIC_FOLDER}/{folder}/{image_name}', 'wb', encoding="utf-8") as f:
             f.write(file)
 
-        return ImageService._url(image_name, folder)
+        return image_name
 
     @staticmethod
     async def delete_image(url: str, folder: str = 'uploads') -> None:
@@ -114,51 +101,84 @@ class ImageService:
 
         initials = username[:2].upper()
 
-        background_colors, text_colors = ImageService.generate_color_palette()
+        while True:
+            # Generate random background color
+            background_color = ImageService.generate_random_color()
+            background_color_brightness = ImageService.calculate_color_brightness(background_color)
+
+            # Check if background color brightness is high enough
+            if background_color_brightness >= 125:
+                break
+
+        while True:
+            # Generate random text color
+            text_color = ImageService.generate_random_color()
+            text_color_brightness = ImageService.calculate_color_brightness(text_color)
+
+            # Check if text color contrast with background is high enough
+            contrast_ratio = ImageService.get_contrast_ratio(background_color, text_color)
+            if contrast_ratio >= 4.5:
+                break
 
         size = 200
 
-        image = Image.new('RGB', (size, size), color=random.choice(background_colors))
+        image = Image.new('RGB', (size, size), color=background_color)
         draw = ImageDraw.Draw(image)
         font = ImageFont.truetype('arial.ttf', 80)
         text_size = draw.textsize(initials, font=font)
         text_position = ((size - text_size[0]) / 2, (size - text_size[1]) / 2)
-        draw.text(text_position, initials, fill=random.choice(text_colors), font=font)
+        draw.text(text_position, initials, fill=text_color, font=font)
 
         image_name = f'{uuid4()}.png'
         image.save(f'{PUBLIC_FOLDER}/avatars/{image_name}')
 
-        return ImageService._url(image_name, "avatars")
+        return image_name
 
     @staticmethod
-    def generate_color_palette() -> list:
+    def generate_random_color() -> tuple:
         """
-        Generate color palette.
+        Generate random color.
 
-        :return: Color palette with background and text colors.
+        :return: Random RGB color.
         """
 
-        NUM_COLORS = 5
+        r = random.randint(0, 255)
+        g = random.randint(0, 255)
+        b = random.randint(0, 255)
 
-        hue = random.random()
-        saturation = 0.5
-        value = 0.5
-        start_color = colorsys.hsv_to_rgb(hue, saturation, value)
+        return (r, g, b)
 
-        background_colors = []
-        text_colors = []
-        for i in range(NUM_COLORS):
-            hue += 0.1
-            hue %= 1
-            next_color = colorsys.hsv_to_rgb(hue, saturation, value)
+    @staticmethod
+    def calculate_color_brightness(color: tuple) -> float:
+        """
+        Calculate color brightness.
 
-            if (0.2126 * next_color[0] + 0.7152 * next_color[1] + 0.0722 * next_color[2]) > 0.5:
-                background_colors.append(tuple(int(c * 255) for c in start_color))
-                text_colors.append(tuple(int(c * 255) for c in next_color))
-            else:
-                background_colors.append(tuple(int(c * 255) for c in next_color))
-                text_colors.append(tuple(int(c * 255) for c in start_color))
+        :param color: RGB color.
 
-            start_color = next_color
+        :return: Color brightness.
+        """
 
-        return background_colors, text_colors
+        r, g, b = color
+        brightness = (r * 299 + g * 587 + b * 114) / 1000
+        return brightness
+
+    @staticmethod
+    def get_contrast_ratio(color1: tuple, color2: tuple) -> float:
+        """
+        Get contrast ratio between two colors.
+
+        :param color1: RGB color.
+        :param color2: RGB color.
+
+        :return: Contrast ratio.
+        """
+
+        brightness1 = ImageService.calculate_color_brightness(color1)
+        brightness2 = ImageService.calculate_color_brightness(color2)
+
+        if brightness1 > brightness2:
+            return (brightness1 + 0.05) / (brightness2 + 0.05)
+
+        return (brightness2 + 0.05) / (brightness1 + 0.05)
+
+

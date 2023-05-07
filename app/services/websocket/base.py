@@ -1,6 +1,8 @@
 from enum import Enum
 from typing import Union, Optional
 
+from aiocache import cached
+from aiocache.serializers import PickleSerializer
 from fastapi.encoders import jsonable_encoder
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel
@@ -253,6 +255,7 @@ class SocketBase:
             **message
         })
 
+    @cached(ttl=30, serializer=PickleSerializer())
     async def check_if_user_can_send_message(
             self,
             user_id: PyObjectId,

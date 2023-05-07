@@ -253,7 +253,7 @@ class UserSessionService:
         """
 
         # set the `current` field to True if the sessions token is the same as the user's current token
-        user = await UserService.get_by_id(user_id, db)
+        user = await UserService.get_by_id__uncached(user_id, db)
 
         sessions = []
         for user_session in user.sessions:

@@ -1,6 +1,6 @@
 from fastapi.encoders import jsonable_encoder
 
-from app.common.swagger.examples.dialog import MESSAGES_EXAMPLE as DIALOG_MESSAGES_EXAMPLE, DIALOG_EXAMPLE
+from app.common.swagger.examples.dialog import MESSAGES_EXAMPLE as DIALOG_MESSAGES_EXAMPLE, DIALOG_EXAMPLE, USER_EXAMPLE as DIALOG_USER_EXAMPLE
 from app.common.swagger.examples.user import USER_EXAMPLE
 from app.models.common.object_id import PyObjectId
 from app.models.dialog.dialog import DialogInResponseModel, UserInDialogResponseModel
@@ -40,7 +40,7 @@ MESSAGES_EXAMPLE = [
 SEARCH_EXAMPLE = SearchResultModel(
     dialogs=[DIALOG_EXAMPLE],
     messages=MESSAGES_EXAMPLE,
-    users=[USER_EXAMPLE],
+    users=[DIALOG_USER_EXAMPLE],
 )
 
 # Search example model (for swagger).

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Union
 
-from fastapi import APIRouter, Depends, Request, Response, Path
+from fastapi import APIRouter, Depends, Request, Response
 from fastapi.encoders import jsonable_encoder
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -13,12 +13,12 @@ from app.core.ouath.main import get_current_user, oauth2_scheme
 from app.database.main import get_database
 from app.exception.api import APIException
 from app.models.common.object_id import PyObjectId
-from app.services.auth.new_device import NewDeviceService
 from app.models.user.user import UserInAuthResponseModel, UserInSignUpModel, UserModel, UserInCallResetPasswordModel, \
     UserInResetPasswordModel, UserInActivationModel, UserInLoginModel, UserInEventResponseModel, \
     UserInTwoFactorAuthenticationModel, UserInNewDeviceConfirmationModel
 from app.models.user.utils.reset_code import ValidateResetPasswordTokenModel
 from app.services.auth.auth import AuthService
+from app.services.auth.new_device import NewDeviceService
 from app.services.token.token import TokenService
 from app.services.user.sessions import UserSessionService
 from app.services.user.user import UserService
@@ -161,7 +161,7 @@ async def validate_reset_password_token(
         raise APIException.bad_request("The reset password token is incorrect",
                                        translation_key="resetPasswordTokenIsNotValid")
 
-    user = await UserService.get_by_id(PyObjectId(user_id), db)
+    user = await UserService.get_by_id__uncached(PyObjectId(user_id), db)
     if not user:
         raise APIException.not_found("The reset password token is incorrect.",
                                      translation_key="resetPasswordTokenIsNotValid")

@@ -2,6 +2,8 @@ import re
 from datetime import datetime, timedelta
 from typing import Optional
 
+from aiocache import cached
+from aiocache.serializers import PickleSerializer
 from fastapi import UploadFile
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.errors import DuplicateKeyError
@@ -10,7 +12,8 @@ from app.common.constants import USERS_COLLECTION
 from app.common.frontend.pages import ACTIVATION_PAGE
 from app.exception.api import APIException
 from app.models.common.object_id import PyObjectId
-from app.models.user.user import UserModel, UserInSignUpModel, UserInResponseModel, UserInSearchModel
+from app.models.dialog.dialog import DialogInResponseModel, UserInDialogResponseModel
+from app.models.user.user import UserModel, UserInSignUpModel, UserInResponseModel
 from app.services.hash.hash import HashService
 from app.services.image.image import ImageService
 from app.services.mail.mail import EmailService
@@ -25,7 +28,28 @@ class UserService:
     """
 
     @staticmethod
+    @cached(ttl=30, serializer=PickleSerializer())
     async def get_by_id(
+            user_id: PyObjectId,
+            db: AsyncIOMotorClient
+    ) -> Optional[UserModel]:
+        """
+        Get user by id.
+
+        :param user_id: User ID.
+        :param db: Database connection object.
+
+        :return: User object if found, None otherwise.
+        """
+
+        user = await db[USERS_COLLECTION].find_one({"_id": user_id})
+        if not user:
+            return None
+
+        return UserModel.from_mongo(user) if user else None
+
+    @staticmethod
+    async def get_by_id__uncached(
             user_id: PyObjectId,
             db: AsyncIOMotorClient
     ) -> Optional[UserModel]:
@@ -107,7 +131,7 @@ class UserService:
 
             new_user = await db[USERS_COLLECTION].insert_one(user.mongo())
 
-            return await UserService.get_by_id(new_user.inserted_id, db)
+            return await UserService.get_by_id__uncached(new_user.inserted_id, db)
         except DuplicateKeyError:
             raise APIException.bad_request("The username or email is already taken.",
                                            translation_key="usernameOrEmailIsTaken")
@@ -166,7 +190,7 @@ class UserService:
 
         blacklist = []
         for blacklist_model in current_user.blacklist:
-            blacklisted_user = await UserService.get_by_id(blacklist_model.blacklisted_user_id, db)
+            blacklisted_user = await UserService.get_by_id__uncached(blacklist_model.blacklisted_user_id, db)
 
             if blacklist_model is None:
                 continue
@@ -182,7 +206,7 @@ class UserService:
             query: str,
             current_user: UserModel,
             db: AsyncIOMotorClient
-    ) -> list[UserInSearchModel]:
+    ) -> list[DialogInResponseModel]:
         """
         Search for users.
 
@@ -217,7 +241,28 @@ class UserService:
         if not users:
             return []
 
-        return [UserInSearchModel.from_mongo(user) for user in users]
+        result = []
+
+        for raw_user in users:
+            user = UserModel.from_mongo(raw_user)
+
+            is_me_blocked = current_user.id in [blacklist.blacklisted_user_id for blacklist in user.blacklist]
+            pseudo_dialog = DialogInResponseModel(
+                id=user.id,
+                user=UserInDialogResponseModel(**user.dict()),
+                images=[],
+                unread_messages=0,
+                is_pinned=False,
+                is_notifications_enabled=True,
+                is_sound_enabled=True,
+                last_message=None,
+                messages=[],
+                is_me_blocked=is_me_blocked,
+            )
+
+            result.append(pseudo_dialog)
+
+        return result
 
     @staticmethod
     async def get_by_username(username: str, db: AsyncIOMotorClient) -> Optional[UserModel]:

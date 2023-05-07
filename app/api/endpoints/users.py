@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, Response
 from fastapi.encoders import jsonable_encoder
 from motor.motor_asyncio import AsyncIOMotorClient
 
+from app.common.constants import SELF_URL
 from app.common.swagger.responses.users import GET_ME_RESPONSES, GET_MY_SESSIONS_RESPONSES, \
     GET_MY_BLOCKED_USERS_RESPONSES, UPDATE_ME_RESPONSES, UPDATE_MY_AVATAR_RESPONSES, BLACKLIST_USER_RESPONSES
 from app.common.swagger.responses.users.delete_me import DELETE_ME_RESPONSES
@@ -12,7 +13,6 @@ from app.database.main import get_database
 from app.exception.body import APIRequestValidationException
 from app.models.common.exceptions.body import RequestValidationDetails
 from app.models.common.responses.blacklist import BlockOrUnblockUserResponseModel
-from app.models.dialog.dialog import DialogModel
 from app.models.socket.utils import SendBlockedMessageToClient
 from app.models.user.blacklist import BlacklistInCreateModel, BlacklistedUserInResponseModel
 from app.models.user.sessions import UserSessionInResponseModel, UserSessionTypesEnum
@@ -59,7 +59,6 @@ async def get_my_sessions(
     **Note**: This endpoint is protected by OAuth2 scheme. It requires a valid access token to be sent in the **Authorization** header or cookie.
     """
 
-    # sessions = [session for session in current_user.sessions if session.type != UserSessionTypesEnum.TEST]
     sessions = []
     for session in current_user.sessions:
         if session.type != UserSessionTypesEnum.TEST:
@@ -167,7 +166,7 @@ async def update_avatar(
         await ImageService.delete_image(current_user.photo_url, "avatars")
         await UserService.update(current_user, db)
 
-        return {"photoURL": filename}
+        return {"photoURL": f"{filename}"}
 
     error = None
     if file.filename.split(".")[-1] not in allowed_extensions:
@@ -192,7 +191,7 @@ async def update_avatar(
     await ImageService.delete_image(current_user.photo_url, "avatars")
     await UserService.update_avatar(file, current_user, db)
 
-    return {"photoURL": current_user.photo_url}
+    return {"photoURL": f"{current_user.photo_url}"}
 
 
 @router.post(
@@ -268,7 +267,7 @@ async def delete_me(
         return None
 
     for connection in connections:
-       await socket_service.disconnect(connection.websocket)
+        await socket_service.disconnect(connection.websocket)
 
     await DialogService.delete_all_dialogs(current_user.id, db)
     await DialogMessageService.delete_all_messages(current_user.id, db)

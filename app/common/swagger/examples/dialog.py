@@ -44,6 +44,20 @@ DIALOG_EXAMPLE = DialogInResponseModel(
     is_me_blocked=False,
 )
 
+USER_EXAMPLE = DialogInResponseModel(
+    id=PyObjectId("5f9f1b9b9b9b9b9b9b9b9b9b"),
+    label="Dialog example",
+    user=USER_EXAMPLE,
+    images=[],
+    unread_messages=0,
+    is_pinned=False,
+    is_notifications_enabled=True,
+    is_sound_enabled=True,
+    messages=MESSAGES_EXAMPLE,
+    last_message=None,
+    is_me_blocked=False,
+)
+
 """
 Convert out example to JSON (convert all incompatible JSON types to compatible).
 """

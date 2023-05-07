@@ -81,7 +81,7 @@ async def get_current_user(
     if not payload:
         raise APIException.unauthorized("Invalid token.", translation_key="invalidToken")
 
-    user = await UserService.get_by_id(PyObjectId(payload["payload"]["id"]), db)
+    user = await UserService.get_by_id__uncached(PyObjectId(payload["payload"]["id"]), db)
     if not user:
         raise APIException.unauthorized("Cannot find user with this token.", translation_key="userNotFound")
 

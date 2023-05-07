@@ -1,4 +1,3 @@
-import re
 from datetime import timedelta, datetime
 from typing import Union
 
@@ -177,7 +176,7 @@ class AuthService:
             )
 
         user_id = PyObjectId(decoded_token.get("id"))
-        user = await UserService.get_by_id(user_id, db)
+        user = await UserService.get_by_id__uncached(user_id, db)
         if not user:
             raise APIException.bad_request(
                 "Invalid activation code.",
@@ -256,7 +255,7 @@ class AuthService:
                 translation_key="resetPasswordTokenIsNotValid"
             )
 
-        user = await UserService.get_by_id(PyObjectId(user_id), db)
+        user = await UserService.get_by_id__uncached(PyObjectId(user_id), db)
         if not user:
             raise APIException.not_found(
                 "The reset password token is incorrect.",

@@ -1,11 +1,14 @@
+import asyncio
 import json
 from typing import Optional
 
-from fastapi.encoders import jsonable_encoder
+from aiocache import cached
+from aiocache.serializers import PickleSerializer
 from motor.motor_asyncio import AsyncIOMotorClient
 from starlette.websockets import WebSocket
 
 from app.models.common.object_id import PyObjectId
+from app.models.dialog.dialog import DialogInCreateModel
 from app.models.dialog.messages import DialogMessageInCreateModel
 from app.services.dialog.dialog import DialogService
 from app.services.dialog.message import DialogMessageService
@@ -47,6 +50,7 @@ class SocketService(SocketBase):
         json_data = json.loads(message)
         user_type = json_data.get("type", "Type")
         user_id = PyObjectId(TokenService.decode(token).get("payload").get("id"))
+        recipient_id = PyObjectId(json_data.get("recipientId"))
         dialog_id = PyObjectId(json_data.get("dialogId"))
 
         if user_type == SocketReceiveTypesEnum.SEND_MESSAGE:
@@ -55,12 +59,12 @@ class SocketService(SocketBase):
 
             if not text and not file: return
 
-            await self._handle_send_message(user_id, dialog_id, text, file, db)
+            await self._handle_send_message(user_id, dialog_id, recipient_id, text, file, db)
 
         elif user_type == SocketReceiveTypesEnum.READ_MESSAGE:
             message_id = PyObjectId(json_data.get("messageId"))
 
-            await self._handle_read_message(message_id, user_id, dialog_id, db)
+            await self._handle_read_message(message_id, user_id, recipient_id, dialog_id, db)
 
         elif user_type == SocketReceiveTypesEnum.TOGGLE_ONLINE_STATUS:
             status = json_data.get("status")
@@ -68,16 +72,12 @@ class SocketService(SocketBase):
             await self._handle_toggle_online_status(user_id, status, db)
 
         elif user_type == SocketReceiveTypesEnum.TYPING:
-            recipient_id = await self._get_recipient_id(user_id, dialog_id, db)
-
             await self._send_personal_message_by_user_id({
                 "type": SocketSendTypesEnum.TYPING,
                 "dialogId": str(dialog_id),
             }, recipient_id)
 
         elif user_type == SocketReceiveTypesEnum.UNTYPING:
-            recipient_id = await self._get_recipient_id(user_id, dialog_id, db)
-
             await self._send_personal_message_by_user_id({
                 "type": SocketSendTypesEnum.UNTYPING,
                 "dialogId": str(dialog_id),
@@ -91,7 +91,7 @@ class SocketService(SocketBase):
             session = await UserSessionService.get_by_id(PyObjectId(session_id), db)
             if not session: return
 
-            user = await UserService.get_by_id(user_id, db)
+            user = await UserService.get_by_id__uncached(user_id, db)
             user.sessions.remove(session)
 
             connection = self.find_connection_by_token(session.token)
@@ -117,6 +117,7 @@ class SocketService(SocketBase):
                 "sessions": sessions
             }, user_id)
 
+    @cached(ttl=30, serializer=PickleSerializer())
     async def _get_recipient_id(
             self,
             user_id: PyObjectId,
@@ -144,6 +145,7 @@ class SocketService(SocketBase):
             self,
             user_id: PyObjectId,
             dialog_id: PyObjectId,
+            recipient_id: PyObjectId,
             text: str,
             file: dict,
             db: AsyncIOMotorClient
@@ -151,17 +153,24 @@ class SocketService(SocketBase):
         """
         Handle send message event.
 
-        :param user_id: User id.
-        :param dialog_id: Dialog id.
+        :param user_id: User ID.
+        :param dialog_id: Dialog ID.
+        :param recipient_id: Recipient ID.
         :param text: Message text.
         :param file: Message file.
         :param db: Database connection.
         """
 
-        recipient_id = await self._get_recipient_id(user_id, dialog_id, db)
+        is_dialog_exist = await DialogService.get_by_id(dialog_id, db)
 
-        is_user_can_send_message = await self.check_if_user_can_send_message(user_id, recipient_id, db)
-        if not is_user_can_send_message:
+        if is_dialog_exist is None:
+            body = DialogInCreateModel(to_user_id=recipient_id)
+            current_user = await UserService.get_by_id__uncached(user_id, db)
+            new_dialog = await DialogService.create(body, current_user, db)
+            dialog_id = new_dialog.id
+
+        can_send_message = await self.check_if_user_can_send_message(user_id, recipient_id, db)
+        if not can_send_message:
             return
 
         filename = None
@@ -174,18 +183,24 @@ class SocketService(SocketBase):
             text=text,
             file=filename,
         )
-
         new_message = await DialogMessageService.create(new_message_payload, db)
 
-        current_user = await UserService.get_by_id(user_id, db)
-        recipient = await UserService.get_by_id(recipient_id, db)
+        current_user, recipient = await asyncio.gather(
+            UserService.get_by_id(user_id, db),
+            UserService.get_by_id(recipient_id, db)
+        )
 
-        dialog = await DialogService.get_by_id(dialog_id, db)
-        dialog = await DialogService.build_dialog(dialog, current_user, db)
+        dialog, recipient_dialog = await asyncio.gather(
+            DialogService.get_by_id(dialog_id, db),
+            DialogService.get_by_id(dialog_id, db)
+        )
+
+        dialog, recipient_dialog = await asyncio.gather(
+            DialogService.build_dialog(dialog, current_user, db),
+            DialogService.build_dialog(recipient_dialog, recipient, db)
+        )
+
         dialog.messages = []
-
-        recipient_dialog = await DialogService.get_by_id(dialog_id, db)
-        recipient_dialog = await DialogService.build_dialog(recipient_dialog, recipient, db)
         recipient_dialog.messages = []
 
         dialog_data = {
@@ -198,43 +213,44 @@ class SocketService(SocketBase):
             "isSoundEnabled": recipient_dialog.is_sound_enabled
         }
 
-        await self._send_personal_message_by_user_id({
-            "type": SocketSendTypesEnum.RECEIVE_MESSAGE,
-            "message": await DialogMessageService.build_message(new_message, db),
-            "dialog": dialog,
-            "dialogData": dialog_data,
-            "userId": str(user_id),
-        }, user_id)
-
-        await self._send_personal_message_by_user_id({
-            "type": SocketSendTypesEnum.RECEIVE_MESSAGE,
-            "message": await DialogMessageService.build_message(new_message, db),
-            "dialog": recipient_dialog,
-            "dialogData": recipient_dialog_data,
-            "userId": str(user_id),
-        }, recipient_id)
+        await asyncio.gather(
+            self._send_personal_message_by_user_id({
+                "type": SocketSendTypesEnum.RECEIVE_MESSAGE,
+                "message": await DialogMessageService.build_message(new_message, db),
+                "dialog": dialog,
+                "dialogData": dialog_data,
+                "userId": str(user_id),
+            }, user_id),
+            self._send_personal_message_by_user_id({
+                "type": SocketSendTypesEnum.RECEIVE_MESSAGE,
+                "message": await DialogMessageService.build_message(new_message, db),
+                "dialog": recipient_dialog,
+                "dialogData": recipient_dialog_data,
+                "userId": str(user_id),
+            }, recipient_id)
+        )
 
     async def _handle_read_message(
             self,
             message_id: PyObjectId,
             user_id: PyObjectId,
+            recipient_id: PyObjectId,
             dialog_id: PyObjectId,
             db: AsyncIOMotorClient
     ) -> None:
         """
         Handle read message event.
 
-        :param message_id: Message id.
-        :param user_id: User id.
-        :param dialog_id: Dialog id.
+        :param message_id: Message ID.
+        :param user_id: User ID.
+        :param recipient_id: Recipient ID.
+        :param dialog_id: Dialog ID.
         :param db: Database connection.
         """
 
         message = await DialogMessageService.read_message(message_id, dialog_id, db)
         if not message:
             return
-
-        recipient_id = await self._get_recipient_id(user_id, dialog_id, db)
 
         await self._send_personal_message_by_user_id({
             "type": SocketSendTypesEnum.READ_MESSAGE,

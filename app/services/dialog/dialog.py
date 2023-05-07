@@ -1,5 +1,7 @@
 from typing import Optional
 
+from aiocache import cached
+from aiocache.serializers import PickleSerializer
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from app.common.constants import DIALOGS_COLLECTION
@@ -21,6 +23,7 @@ class DialogService:
     """
 
     @staticmethod
+    @cached(ttl=30, serializer=PickleSerializer())
     async def get_by_id(
             dialog_id: PyObjectId,
             db: AsyncIOMotorClient
@@ -149,9 +152,9 @@ class DialogService:
         """
 
         if new_dialog.from_user.id == current_user.id:
-            user = await UserService.get_by_id(new_dialog.to_user.id, db)
+            user = await UserService.get_by_id__uncached(new_dialog.to_user.id, db)
         else:
-            user = await UserService.get_by_id(new_dialog.from_user.id, db)
+            user = await UserService.get_by_id__uncached(new_dialog.from_user.id, db)
 
         user_in_dialog = UserInDialogResponseModel(**user.dict())
 
@@ -286,7 +289,7 @@ class DialogService:
         """
         Delete all dialogs for user.
 
-        :param current_user: Current user object.
+        :param user_id: User ID.
         :param db: Database connection object.
         """
 

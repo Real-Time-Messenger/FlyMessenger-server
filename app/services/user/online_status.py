@@ -14,7 +14,7 @@ class UserOnlineStatusService:
     async def toggle_online_status(user_id: PyObjectId, status: bool, db: AsyncIOMotorClient) -> Optional[UserModel]:
         """ Toggle online status. """
 
-        user = await UserService.get_by_id(user_id, db)
+        user = await UserService.get_by_id__uncached(user_id, db)
         if not user: return None
 
         if not user.settings.last_activity_mode:
