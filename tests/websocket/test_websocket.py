@@ -4,18 +4,7 @@ import urllib
 from motor.motor_asyncio import AsyncIOMotorClient
 from starlette.testclient import TestClient
 
-from app.services.websocket.base import SocketReceiveTypesEnum
 from tests.utils.user import create_fake_user
-
-
-def test_websocket_connection(client: TestClient, get_user_headers: dict[str, str]) -> None:
-    """ Test for websocket connection. """
-
-    token = get_user_headers["Authorization"].split(" ")[1]
-
-    with client.websocket_connect(f"/ws?token={token}") as websocket:
-        data = websocket.receive_json()
-        assert data["ping"] == "pong"
 
 
 def test_websocket_send_message(client: TestClient, get_user_headers: dict[str, str], db: AsyncIOMotorClient) -> None:
@@ -24,9 +13,6 @@ def test_websocket_send_message(client: TestClient, get_user_headers: dict[str, 
     token = get_user_headers["Authorization"].split(" ")[1]
 
     with client.websocket_connect(f"/ws?token={token}") as websocket:
-        data = websocket.receive_json()
-        assert data["ping"] == "pong"
-
         user = create_fake_user(db)
 
         data = {"toUserId": user["id"]}
@@ -38,11 +24,11 @@ def test_websocket_send_message(client: TestClient, get_user_headers: dict[str, 
 
         dialog_id = response["id"]
 
-        websocket.send_json({"dialogId": dialog_id, "text": "test", "file": None, "type": "SEND_MESSAGE"})
+        websocket.send_json({"dialogId": dialog_id, "text": "test", "file": None, "type": "SEND_MESSAGE", "recipientId": user["id"]})
 
         data = websocket.receive_json()
         assert data["type"] == "RECEIVE_MESSAGE"
-        assert data["dialogId"] == dialog_id
+        assert data["dialog"]["id"] == dialog_id
         assert data["message"]["text"] == "test"
 
     request = client.get(f"/api/dialogs/{dialog_id}/messages", headers=get_user_headers)
@@ -58,9 +44,6 @@ def test_websocket_send_message_with_file(client: TestClient, get_user_headers: 
     token = get_user_headers["Authorization"].split(" ")[1]
 
     with client.websocket_connect(f"/ws?token={token}") as websocket:
-        data = websocket.receive_json()
-        assert data["ping"] == "pong"
-
         user = create_fake_user(db)
 
         data = {"toUserId": user["id"]}
@@ -82,11 +65,14 @@ def test_websocket_send_message_with_file(client: TestClient, get_user_headers: 
                 "data": base64.b64encode(file).decode("utf-8"),
             }
 
-            websocket.send_json({"dialogId": dialog_id, "text": "test", "file": file_data, "type": "SEND_MESSAGE"})
+            websocket.send_json({"dialogId": dialog_id, "text": "test", "file": file_data, "type": "SEND_MESSAGE", "recipientId": user["id"]})
 
         data = websocket.receive_json()
+
+        print(data)
+
         assert data["type"] == "RECEIVE_MESSAGE"
-        assert data["dialogId"] == dialog_id
+        assert data["dialog"]["id"] == dialog_id
 
     request = client.get(f"/api/dialogs/{dialog_id}/messages", headers=get_user_headers)
     response = request.json()

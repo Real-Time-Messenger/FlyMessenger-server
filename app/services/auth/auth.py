@@ -223,11 +223,11 @@ class AuthService:
         await UserService.update(user, db)
 
         await EmailService.send_email(
-            user.email,
-            "Password recovery request",
-            "reset_password",
+            email=user.email,
+            subject="Password recovery request",
+            template="reset_password",
+            username=user.username,
             url=f"{RESET_PASSWORD}?token={token}",
-            username=user.username
         )
 
     @staticmethod
@@ -276,7 +276,7 @@ class AuthService:
             )
 
         user.password = HashService.get_hash(body.password)
-        # user.reset_password_token = None
+        user.reset_password_token = None
 
         await UserService.update(user, db)
 

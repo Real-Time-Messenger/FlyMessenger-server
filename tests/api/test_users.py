@@ -20,11 +20,11 @@ def test_get_me(client: TestClient, get_user_headers: dict[str, str]) -> None:
 def test_get_my_sessions_and_blacklist(client: TestClient, get_user_headers: dict[str, str]) -> None:
     """ Test for `my session's` endpoint. """
 
-    request = client.get("/api/users/me/sessions", headers=get_user_headers)
-    assert request.status_code == 200
+    response = client.get("/api/users/me/sessions", headers=get_user_headers)
+    assert response.status_code == 200
 
-    request = client.get("/api/users/me/blocked-users", headers=get_user_headers)
-    assert request.status_code == 200
+    response = client.get("/api/users/me/blacklist", headers=get_user_headers)
+    assert response.status_code == 200
 
 
 def test_update_me(client: TestClient, get_user_headers: dict[str, str]) -> None:
@@ -43,7 +43,7 @@ def test_update_me(client: TestClient, get_user_headers: dict[str, str]) -> None
     request = client.put("/api/users/me", json=data, headers=get_user_headers)
     response = request.json()
     assert request.status_code == 200
-    assert response.get("settings").get("theme") == data["theme"]
+    assert response["theme"] == data["theme"]
 
 
 def test_update_my_avatar(client: TestClient, get_user_headers: dict[str, str]) -> None:

@@ -228,7 +228,7 @@ class DialogMessageService:
             messages = await DialogMessageService.get_by_text(query, dialog.id, db)
 
             for message in messages:
-                sender = await UserService.get_by_id(message.sender_id, db)
+                sender = await UserService.get_by_id__uncached(message.sender_id, db)
 
                 result.append(
                     DialogInResponseModel(

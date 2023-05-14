@@ -8,13 +8,13 @@ def test_global_search(client: TestClient, get_user_headers: dict[str, str]) -> 
     """ Test for `global search` endpoint. """
 
     data = {"query": "test"}
-    request = client.get(f"/api/search/{data['query']}", headers=get_user_headers)
-    response = request.json()
+    response = client.get(f"/api/search?query={data['query']}", headers=get_user_headers)
+    response_json = response.json()
 
-    assert request.status_code == 200
-    assert "dialogs" in response
-    assert "users" in response
-    assert "messages" in response
+    assert response.status_code == 200
+    assert "dialogs" in response_json
+    assert "users" in response_json
+    assert "messages" in response_json
 
 
 def test_in_dialog_search(client: TestClient, get_user_headers: dict[str, str], db: AsyncIOMotorClient) -> None:
@@ -33,7 +33,7 @@ def test_in_dialog_search(client: TestClient, get_user_headers: dict[str, str], 
     dialog_id = response["id"]
 
     data = {"query": "test"}
-    request = client.get(f"/api/search/{dialog_id}/{data['query']}", headers=get_user_headers)
+    request = client.get(f"/api/search/{dialog_id}?query={data['query']}", headers=get_user_headers)
     response = request.json()
 
     assert request.status_code == 200

@@ -1,29 +1,25 @@
-{% extends "base/_header.html" %}
+{% extends "base/index.html" %}
 
 {% block content %}
-    <div style="width: 400px; border-radius: 5px; padding: 30px 35px; background-color: #FFFFFF !important; margin: 0 auto;">
-        <div style="display: flex; align-items: center; gap: 5px; justify-content: center;">
-            <img src="http://localhost:8000/public/logo.png" alt="" width="30">
+    <span>Hello, <b>{{ username }}</b>.</span>
 
-            <span class="fly-messenger_title" style="font-size: 20px; font-weight: 600; color: #161616;">Fly Messenger</span>
-        </div>
+    <span style="display:block; margin-top: 10px">We are writing to you with an important message regarding the security of your account. Detected attempts to log into your account from an unknown device. In order to protect your confidential information and account security, we provide you with an activation code for a new device.</span>
 
-        <div>
-            <div style="display: block; margin-bottom: 20px;">
-                Hello, <b>{{ username }}</b>
-            </div>
+    <div style="width: fit-content; padding: 10px; font-size: 18px; border-radius: 5px; background-color: #CBD8F2; margin-top: 30px">
+        <span>Code: <b>{{ secret }}</b></span>
+    </div>
 
-            <div style="display: block; margin-bottom: 20px;">
-                We noticed signing in from a new device. To authorize, you need to enter the code that we have provided below.
-            </div>
+    <div style="display: grid; margin-top: 20px">
+        <span>Please note that without entering this activation code, your device will not be fully activated and you will not be able to access your account. We recommend that you take immediate action to protect your account.</span>
+        <span style="margin-top: 10px">We remind you of the importance of the security of your account. We recommend that you use strong passwords, enable two-factor authentication, and be careful when providing information about your account.</span>
+    </div>
 
-            <div style="display: block; margin-bottom: 20px;">
-                <span>Yours code: <b>{{secret}}</b></span>
-            </div>
+    <div style="margin-top: 30px">
+        <span>Thank you for your attention and cooperation in keeping your account secure. We work hard to ensure that your experience of using our platform is as safe and enjoyable as possible..</span>
 
-            <div style="display: block; margin-bottom: 20px;">
-                If it wasn't you, we strongly recommend that you change your password immediately.
-            </div>
+        <div style="margin-top: 20px">
+            <span>Best regards,</span>
+            <span style="display: block"><b>Fly Messenger</b> Team</span>
         </div>
     </div>
 {% endblock content %}

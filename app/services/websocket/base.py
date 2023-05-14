@@ -67,7 +67,7 @@ class SocketBase:
         """
 
         await websocket.accept()
-        await websocket.send_json({"ping": "pong"})
+        # await websocket.send_json({"ping": "pong"})
 
         token = TokenService.decode(authorization)
         if token is None:

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+</head>
+
+<body>
+<div style="width: 540px; margin: 0 auto; padding: 20px; background-color: #fff; border-radius: 5px; display: block; gap: 20px;">
+    {% include 'base/header.html' %}
+
+    <div style="display: block; margin-top: 20px;">
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    {% include 'base/footer.html' %}
+</div>
+</body>
+</html>

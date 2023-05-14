@@ -30,12 +30,12 @@ class UserSettingsModel(MongoModel):
     language: LanguagesEnum = Field(default=LanguagesEnum.ENGLISH)
 
     chats_notifications_enabled: bool = Field(default=True, alias="chatsNotificationsEnabled")
-    conversations_notifications_enabled: bool = Field(default=True, alias="conversationsNotificationsEnabled")
-    groups_notifications_enabled: bool = Field(default=True, alias="groupsNotificationsEnabled")
+    conversations_notifications_enabled: bool = Field(default=False, alias="conversationsNotificationsEnabled")
+    groups_notifications_enabled: bool = Field(default=False, alias="groupsNotificationsEnabled")
 
     chats_sound_enabled: bool = Field(default=True, alias="chatsSoundEnabled")
-    conversations_sound_enabled: bool = Field(default=True, alias="conversationsSoundEnabled")
-    groups_sound_enabled: bool = Field(default=True, alias="groupsSoundEnabled")
+    conversations_sound_enabled: bool = Field(default=False, alias="conversationsSoundEnabled")
+    groups_sound_enabled: bool = Field(default=False, alias="groupsSoundEnabled")
 
     last_activity_mode: bool = Field(default=True, alias="lastActivityMode")
 

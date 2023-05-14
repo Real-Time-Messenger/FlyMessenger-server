@@ -5,7 +5,6 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from starlette.testclient import TestClient
 
 from app.common.constants import SELF_URL, USERS_COLLECTION
-from app.models.common.object_id import PyObjectId
 from app.models.user.user import UserModel
 from tests.utils.utils import random_lower_string, random_email
 
@@ -25,7 +24,7 @@ def user_authentication_headers(
     return {"Authorization": f"Bearer {auth_token}"}
 
 
-def create_fake_user(db: AsyncIOMotorClient) -> UserModel:
+def create_fake_user(db: AsyncIOMotorClient) -> dict:
     """ Create fake user. """
 
     random_username = random

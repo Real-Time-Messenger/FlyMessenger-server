@@ -16,7 +16,7 @@ from app.services.user.sessions import UserSessionService
 from app.services.user.user import UserService
 
 
-class OAuth2PasswordBearerCookie(OAuth2):
+class OAuth2PasswordBearerWithCookie(OAuth2):
     """
     Implementation of the OAuth2PasswordBearer.
     This class allows us to use the OAuth2 scheme in out app with the headers and cookies.
@@ -66,7 +66,7 @@ class OAuth2PasswordBearerCookie(OAuth2):
         return param
 
 
-oauth2_scheme = OAuth2PasswordBearerCookie(token_url="/api/auth/login")
+oauth2_scheme = OAuth2PasswordBearerWithCookie(token_url="/api/auth/login")
 
 
 async def get_current_user(

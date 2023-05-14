@@ -1,21 +1,22 @@
-{% extends "base/_header.html" %}
+{% extends "base/index.html" %}
 
 {% block content %}
-    <div style="width: 400px; border-radius: 5px; padding: 30px 35px; background-color: #FFFFFF !important; margin: 0 auto;">
-        <div style="display: flex; align-items: center; gap: 5px; justify-content: center;">
-            <img src="http://localhost:8000/public/logo.png" alt="" width="30">
+    <span>
+        Hello, <b>{{ username }}</b>.
+    </span>
 
-            <span class="fly-messenger_title" style="font-size: 20px; font-weight: 600; color: #161616;">Fly Messenger</span>
-        </div>
+    <span style="display: block; margin-top: 20px;">We are writing to you with an important message regarding the activation of your account. A special code is required to complete the activation process. We provide you with this activation code.</span>
 
-        <div>
-            <div style="display: block; margin-bottom: 20px;">
-                Hello, <b>{{ username }}</b>
-            </div>
+    <div style="width: fit-content; padding: 10px; font-size: 18px; border-radius: 5px; background-color: #CBD8F2; margin-top: 30px">
+        <span>Activation link: <a href="{{ url }}">Click to activate</a></span>
+    </div>
 
-            <div style="display: block; margin-bottom: 20px;">
-                Here is you activation link: <a href="{{ url }}">Click to activate</a>
-            </div>
+    <div style="margin-top: 30px">
+        <span>Thank you for your attention and cooperation in keeping your account secure. We work hard to ensure that your experience of using our platform is as safe and enjoyable as possible.</span>
+
+        <div style="margin-top: 20px">
+            <span>Best regards,</span>
+            <span style="display: block"><b>Fly Messenger</b> Team</span>
         </div>
     </div>
 {% endblock content %}

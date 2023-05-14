@@ -207,12 +207,15 @@ class UserSessionService:
         :return: True if user is foreign, False if user is not foreign.
         """
 
-        ip_address = await LocationService.get_ip_address(request)
-        for session in user.sessions:
-            if session.ip_address == ip_address:
-                return False
+        try:
+            ip_address = await LocationService.get_ip_address(request)
+            for session in user.sessions:
+                if session.ip_address == ip_address:
+                    return False
 
-        return True
+            return True
+        except Exception:
+            return False
 
     @staticmethod
     async def create_fake(user, token, db) -> UserSessionModel:

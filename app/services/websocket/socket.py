@@ -1,9 +1,6 @@
 import asyncio
 import json
-from typing import Optional
 
-from aiocache import cached
-from aiocache.serializers import PickleSerializer
 from motor.motor_asyncio import AsyncIOMotorClient
 from starlette.websockets import WebSocket
 
@@ -116,30 +113,6 @@ class SocketService(SocketBase):
                 "success": True,
                 "sessions": sessions
             }, user_id)
-
-    @cached(ttl=30, serializer=PickleSerializer())
-    async def _get_recipient_id(
-            self,
-            user_id: PyObjectId,
-            dialog_id: PyObjectId,
-            db: AsyncIOMotorClient
-    ) -> Optional[PyObjectId]:
-        """
-        Get recipient id.
-
-        :param user_id: User id.
-        :param dialog_id: Dialog id.
-        :param db: Database connection.
-
-        :return: Recipient id.
-        """
-
-        dialog = await DialogService.get_by_id(dialog_id, db)
-
-        if not dialog:
-            return None
-
-        return dialog.from_user.id if dialog.from_user.id != user_id else dialog.to_user.id
 
     async def _handle_send_message(
             self,

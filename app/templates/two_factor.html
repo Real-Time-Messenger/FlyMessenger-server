@@ -1,26 +1,26 @@
-{% extends "base/_header.html" %}
+{% extends "base/index.html" %}
 
 {% block content %}
-    <div style="width: 400px; border-radius: 5px; padding: 30px 35px; background-color: #FFFFFF !important; margin: 0 auto;">
-        <div style="display: flex; align-items: center; gap: 5px; justify-content: center;">
-            <img src="http://localhost:8000/public/logo.png" alt="" width="30">
+    <span>
+        Hello, <b>{{ username }}</b>.
+    </span>
 
-            <span class="fly-messenger_title"
-                  style="font-size: 20px; font-weight: 600; color: #161616;">Fly Messenger</span>
-        </div>
+    <div style="display: grid; margin-top: 20px">
+        <span>We have detected an attempt to log into your account from an unknown device. For your own safety, we recommend that you take immediate action.</span>
+        <span style="margin-top: 10px">If you haven't attempted to sign in on a new device, we recommend that you change your account password immediately. Choose a complex password containing upper and lower case letters, numbers and special characters. Do not use personal information or obvious combinations. You should also update passwords on other services where you use the same password.</span>
+        <span style="margin-top: 10px">It's also a good idea to turn on two-factor authentication to increase your account security if you haven't already. This feature will provide an additional layer of protection by requiring a second verification step when logging into your account.</span>
+    </div>
 
-        <div>
-            <div style="display: block; margin-bottom: 20px;">
-                Hello, <b>{{ username }}</b>
-            </div>
+    <div style="width: fit-content; padding: 10px; font-size: 18px; border-radius: 5px; background-color: #CBD8F2; margin-top: 30px">
+        <span>Code: <b>{{ secret }}</b></span>
+    </div>
 
-            <div style="display: block; margin-bottom: 20px;">
-                To continue authorization, you need to provide a two-factor authentication code.
-            </div>
+    <div style="margin-top: 30px">
+        <span>Thank you for your attention and cooperation in keeping your account secure. We work hard to ensure that your experience of using our platform is as safe and enjoyable as possible.</span>
 
-            <div style="display: block; margin-bottom: 20px;">
-                <span>Yours code: <b>{{ secret }}</b></span>
-            </div>
+        <div style="margin-top: 20px">
+            <span>Best regards,</span>
+            <span style="display: block"><b>Fly Messenger</b> Team</span>
         </div>
     </div>
 {% endblock content %}

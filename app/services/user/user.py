@@ -46,7 +46,7 @@ class UserService:
         if not user:
             return None
 
-        return UserModel.from_mongo(user) if user else None
+        return UserModel.from_mongo(user)
 
     @staticmethod
     async def get_by_id__uncached(
@@ -66,7 +66,7 @@ class UserService:
         if not user:
             return None
 
-        return UserModel.from_mongo(user) if user else None
+        return UserModel.from_mongo(user)
 
     @staticmethod
     async def authenticate(username: str, password: str, db: AsyncIOMotorClient) -> UserModel:

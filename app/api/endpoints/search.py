@@ -11,6 +11,7 @@ from app.services.search.search import SearchService
 
 router = APIRouter()
 
+
 @router.get(
     path="/{dialogId}",
     responses=SEARCH_BY_DIALOG_RESPONSES
