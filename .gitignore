@@ -26,5 +26,5 @@ archive.zip
 
 .env
 
-public/avatars/*
-public/uploads/*
+!public/avatars/.gitignore
+!public/uploads/.gitignore
