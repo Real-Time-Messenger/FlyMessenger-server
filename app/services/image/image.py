@@ -140,7 +140,7 @@ class ImageService:
 
         image = Image.new('RGB', (size, size), color=background_color)
         draw = ImageDraw.Draw(image)
-        font = ImageFont.truetype('arial.ttf', 80)
+        font = ImageFont.truetype('public/fonts/regular.ttf', size=100)
         text_size = draw.textsize(initials, font=font)
         text_position = ((size - text_size[0]) / 2, (size - text_size[1]) / 2)
         draw.text(text_position, initials, fill=text_color, font=font)
